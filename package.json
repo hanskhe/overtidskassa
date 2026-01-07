@@ -1,0 +1,31 @@
+{
+  "name": "overtidskassa",
+  "version": "0.1.0",
+  "description": "Browser extension for calculating overtime take-home pay in Norway",
+  "main": "lib/trekktabell.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node test/trekktabell.test.js",
+    "validate": "node test/validate-against-skatteetaten.js"
+  },
+  "keywords": [
+    "norway",
+    "tax",
+    "overtime",
+    "calculator",
+    "tabelltrekk",
+    "browser-extension"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hanskhe/overtidskassa"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
