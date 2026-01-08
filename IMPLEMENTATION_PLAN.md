@@ -364,37 +364,252 @@ function calculateOvertimeTakeHome(params)
 **Responsibilities:**
 
 1. Load settings from storage
-1. Find overtime hours element on page (configurable selector)
+1. Find overtime hours element on page using robust DOM detection
 1. Parse the overtime hours value
 1. Calculate take-home using `calculateOvertimeTakeHome()`
-1. Inject result display near the overtime hours element
+1. Inject result display inline with the overtime hours
 
-**Configuration (at top of file):**
+**DOM Identification Strategy:**
+
+The timesheet page uses CSS Modules with dynamic class names (e.g., `_row_v4wpf_15`). We cannot rely on exact class names, so we use:
+
+1. **Contextual search**: Find the "Nøkkeltall" (Key figures) heading first
+2. **Pattern matching**: Use attribute selectors with wildcards (`[class*="_row_"]`)
+3. **Content matching**: Identify the row where first span contains "Overtid"
+4. **Structure validation**: Ensure row has exactly 2 spans before proceeding
+
+**Implementation:**
 
 ```javascript
-const CONFIG = {
-  // UPDATE THESE for the actual timesheet system
-  overtimeSelector: '#overtime-hours',  // CSS selector for overtime hours element
-  insertAfterSelector: '#overtime-hours', // Where to inject result
-  parseOvertimeValue: (el) => parseFloat(el.textContent) // How to extract hours
-};
+/**
+ * Finds the DOM row containing overtime information
+ * @returns {Object|null} - { row: Element, hoursSpan: Element, labelSpan: Element } or null
+ */
+function findOvertimeRow() {
+  // Strategy 1: Search within "Nøkkeltall" section for context
+  const headings = Array.from(document.querySelectorAll('h2'));
+  const keyFiguresHeading = headings.find(h => h.textContent.trim().includes('Nøkkeltall'));
+
+  let searchRoot = document.body;
+
+  if (keyFiguresHeading) {
+    // Find the container div (parent or ancestor with container class)
+    const container = keyFiguresHeading.closest('[class*="_container_"]')
+      || keyFiguresHeading.parentElement;
+    if (container) {
+      searchRoot = container;
+    }
+  }
+
+  // Find all rows within search context (using CSS module pattern)
+  const rows = searchRoot.querySelectorAll('[class*="_row_"]');
+
+  for (const row of rows) {
+    const spans = row.querySelectorAll('span');
+
+    // Validate structure: must have exactly 2 spans
+    if (spans.length === 2) {
+      const labelSpan = spans[0];
+      const hoursSpan = spans[1];
+
+      // Check if first span contains "Overtid" (case-insensitive)
+      if (labelSpan.textContent.toLowerCase().includes('overtid')) {
+        return { row, hoursSpan, labelSpan };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extracts overtime hours from the hours span
+ * @param {Element} hoursSpan - The span element containing hours (e.g., "0.0 t")
+ * @returns {number|null} - Parsed hours or null if invalid
+ */
+function parseOvertimeHours(hoursSpan) {
+  // Text format: "X.X t" or "X.X&nbsp;t"
+  const text = hoursSpan.textContent.trim();
+  const match = text.match(/^([\d.]+)/);
+
+  if (match) {
+    const hours = parseFloat(match[1]);
+    return isNaN(hours) ? null : hours;
+  }
+
+  return null;
+}
 ```
 
-**Injection HTML template:**
+**Injection Strategy:**
+
+The calculated overtime pay is injected **inline** within the existing hours span to minimize disruption:
+
+```
+Before:  "0.0 t"
+After:   "0.0 t (3 000 kr)"
+```
+
+**Implementation:**
+
+```javascript
+/**
+ * Injects or updates the overtime pay display
+ * @param {Element} hoursSpan - The span containing hours
+ * @param {number} takeHomePay - Calculated take-home pay in NOK
+ */
+function injectOvertimePay(hoursSpan, takeHomePay) {
+  const EXTENSION_MARKER = 'overtime-calculator-injected';
+
+  // Check if already injected (avoid duplicates)
+  let payElement = hoursSpan.querySelector(`.${EXTENSION_MARKER}`);
+
+  if (!payElement) {
+    // Create new element
+    payElement = document.createElement('span');
+    payElement.className = EXTENSION_MARKER;
+    payElement.style.cssText = `
+      margin-left: 0.5em;
+      color: #0066cc;
+      font-weight: normal;
+    `;
+    hoursSpan.appendChild(payElement);
+  }
+
+  // Format number with thousand separators (Norwegian style: "3 000")
+  const formatted = Math.round(takeHomePay).toLocaleString('nb-NO');
+
+  // Update content
+  payElement.textContent = `(${formatted} kr)`;
+}
+
+/**
+ * Main content script execution
+ */
+async function main() {
+  // Load settings
+  const settings = await browser.storage.local.get('settings');
+
+  if (!settings.settings || !settings.settings.yearlySalary || !settings.settings.tableNumber) {
+    console.warn('Overtime Calculator: Settings not configured');
+    return;
+  }
+
+  const { yearlySalary, tableNumber, taxYear = 2026 } = settings.settings;
+
+  // Find overtime row
+  const overtimeData = findOvertimeRow();
+
+  if (!overtimeData) {
+    console.warn('Overtime Calculator: Could not find overtime row');
+    return;
+  }
+
+  const { hoursSpan } = overtimeData;
+
+  // Parse hours
+  const overtimeHours = parseOvertimeHours(hoursSpan);
+
+  if (overtimeHours === null || overtimeHours === 0) {
+    // No overtime - optionally remove injected element if it exists
+    const existing = hoursSpan.querySelector('.overtime-calculator-injected');
+    if (existing) {
+      existing.remove();
+    }
+    return;
+  }
+
+  // Calculate take-home
+  const result = calculateOvertimeTakeHome({
+    yearlySalary,
+    overtimeHours,
+    tableNumber,
+    taxYear
+  });
+
+  // Inject result
+  injectOvertimePay(hoursSpan, result.takeHome);
+}
+
+// Run on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', main);
+} else {
+  main();
+}
+
+// Re-run when page content changes (for SPAs)
+const observer = new MutationObserver(() => {
+  main();
+});
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true
+});
+```
+
+**Styling Considerations:**
+
+- **Inline injection**: Minimally intrusive, appears as part of existing content
+- **Color**: Use blue (`#0066cc`) to indicate this is calculated/external data
+- **Format**: Norwegian number formatting with spaces as thousand separators
+- **Idempotency**: Check for existing injection to avoid duplicates
+- **Cleanup**: Remove injection when hours = 0
+
+### 4.5 DOM Identification Challenge: CSS Modules
+
+**Problem:**
+
+The timesheet application uses CSS Modules, which generate dynamic class names like `_row_v4wpf_15`. These hashes change with each build, making traditional CSS selectors unreliable:
 
 ```html
-<div class="overtime-takehome-display">
-  <span class="label">Est. take-home:</span>
-  <span class="amount">kr 4 092</span>
-  <span class="detail">(43% tax on kr 7 179 gross)</span>
+<div class="_infoTables_rs20y_106">
+  <div class="_container_v4wpf_1">
+    <h2 class="_header_v4wpf_5">Nøkkeltall</h2>
+    <div class="_row_v4wpf_15">
+      <span>Overtid januar (uke 2–4)</span>
+      <span>0.0&nbsp;t</span>
+    </div>
+    <div class="_row_v4wpf_15">
+      <span>Fleksikonto</span>
+      <span>22.5 t</span>
+    </div>
+  </div>
 </div>
 ```
 
-**Styling:**
+**Solution:**
 
-- Non-intrusive, matches page style where possible
-- Clear visual indicator this is an extension-added element
-- Tooltip with breakdown on hover
+Use a **three-layer identification strategy**:
+
+1. **Context layer**: Find semantic anchors (heading text "Nøkkeltall")
+2. **Pattern layer**: Use attribute selectors with wildcards (`[class*="_row_"]`)
+3. **Content layer**: Match on text content ("Overtid")
+
+**Why this works:**
+
+- **CSS Module patterns are stable**: While `_row_v4wpf_15` changes, the pattern `_row_*` remains
+- **Heading text is stable**: "Nøkkeltall" is user-facing content, unlikely to change
+- **"Overtid" is stable**: The Norwegian word for overtime is part of the business domain
+- **Structure is stable**: Two spans per row is a layout decision
+
+**Robustness guarantees:**
+
+| Change Type | Impact | Mitigation |
+|-------------|--------|------------|
+| CSS Module hash changes | None | Using wildcards, not exact matches |
+| Layout restructuring | Moderate | Fallback to global search if context not found |
+| Text changes (e.g., "Overtid" → "Overtidsarbeid") | High | Would require update (acceptable) |
+| Additional rows added | None | We match on content, not position |
+| Timesheet moves to SPA | None | MutationObserver handles dynamic updates |
+
+**Testing strategy:**
+
+1. **Simulate CSS hash changes**: Manually edit class names in browser DevTools
+2. **Test text variations**: "Overtid januar", "Overtid februar", "Overtid (hele året)"
+3. **Test missing context**: Remove "Nøkkeltall" heading, ensure fallback works
+4. **Test dynamic updates**: Use SPA navigation if available
 
 -----
 
@@ -492,9 +707,16 @@ Compare extension output against:
 
 ### Phase 3: Content Script
 
-- [ ] Implement DOM detection (with placeholder selectors)
-- [ ] Implement result injection
-- [ ] Style injected element
+- [ ] Implement robust DOM detection using CSS module patterns
+  - [ ] Implement `findOvertimeRow()` with contextual search
+  - [ ] Test with various "Overtid" text variations (month names, week ranges)
+  - [ ] Add fallback search if "Nøkkeltall" heading not found
+- [ ] Implement `parseOvertimeHours()` for parsing "X.X t" format
+- [ ] Implement inline injection strategy
+  - [ ] Create `injectOvertimePay()` function
+  - [ ] Ensure idempotency (no duplicate injections)
+  - [ ] Handle cleanup when hours = 0
+- [ ] Add MutationObserver for SPA-style updates
 - [ ] Handle missing settings gracefully
 
 ### Phase 4: Integration
