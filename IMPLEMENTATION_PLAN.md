@@ -691,33 +691,33 @@ Compare extension output against:
 
 ## 8. Implementation Checklist
 
-### Phase 1: Core Algorithm
+### Phase 1: Core Algorithm ✓
 
-- [ ] Implement `tax-rates.js` with 2026 constants
-- [ ] Implement `trekktabell.js` with calculation functions
-- [ ] Write unit tests for calculation accuracy
-- [ ] Validate against Skatteetaten calculator
+- [x] Implement `tax-rates.js` with 2026 constants
+- [x] Implement `trekktabell.js` with calculation functions
+- [x] Write unit tests for calculation accuracy
+- [x] Validate against Skatteetaten calculator
 
-### Phase 2: Extension Popup
+### Phase 2: Extension Popup ✓
 
-- [ ] Create popup HTML/CSS
-- [ ] Implement settings save/load
-- [ ] Add input validation
-- [ ] Test cross-browser (Chrome, Firefox)
+- [x] Create popup HTML/CSS
+- [x] Implement settings save/load
+- [x] Add input validation
+- [ ] Test cross-browser (Chrome, Firefox) - *Pending manual testing*
 
-### Phase 3: Content Script
+### Phase 3: Content Script ✓
 
-- [ ] Implement robust DOM detection using CSS module patterns
-  - [ ] Implement `findOvertimeRow()` with contextual search
-  - [ ] Test with various "Overtid" text variations (month names, week ranges)
-  - [ ] Add fallback search if "Nøkkeltall" heading not found
-- [ ] Implement `parseOvertimeHours()` for parsing "X.X t" format
-- [ ] Implement inline injection strategy
-  - [ ] Create `injectOvertimePay()` function
-  - [ ] Ensure idempotency (no duplicate injections)
-  - [ ] Handle cleanup when hours = 0
-- [ ] Add MutationObserver for SPA-style updates
-- [ ] Handle missing settings gracefully
+- [x] Implement robust DOM detection using CSS module patterns
+  - [x] Implement `findOvertimeRow()` with contextual search
+  - [x] Test with various "Overtid" text variations (month names, week ranges)
+  - [x] Add fallback search if "Nøkkeltall" heading not found
+- [x] Implement `parseOvertimeHours()` for parsing "X.X t" format
+- [x] Implement inline injection strategy
+  - [x] Create `injectOvertimePay()` function
+  - [x] Ensure idempotency (no duplicate injections)
+  - [x] Handle cleanup when hours = 0
+- [x] Add MutationObserver for SPA-style updates
+- [x] Handle missing settings gracefully
 
 ### Phase 4: Integration
 

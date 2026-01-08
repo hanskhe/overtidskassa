@@ -1,0 +1,25 @@
+/**
+ * Content Script Styles for Overtime Calculator Extension
+ *
+ * Styles for the injected overtime pay element.
+ * Uses minimal, non-intrusive styling to blend with the page.
+ */
+
+.overtime-calculator-injected {
+  margin-left: 0.5em;
+  color: #0066cc !important;
+  font-weight: normal !important;
+  font-size: inherit;
+  white-space: nowrap;
+}
+
+/* Optional: Add a subtle transition for smooth updates */
+.overtime-calculator-injected {
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Optional: Tooltip for additional context */
+.overtime-calculator-injected::before {
+  content: '';
+  /* Could add a small icon or indicator here if desired */
+}
