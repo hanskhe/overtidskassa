@@ -4,7 +4,17 @@ A browser extension for calculating estimated take-home pay for overtime hours i
 
 ## Project Status
 
-This project is in the planning phase. See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the complete implementation specification.
+**Phase 1 (Core Algorithm): COMPLETED ✓**
+- Tax calculation engine implemented
+- Unit tests passing (38/38)
+- Validation test cases generated
+
+**Next phases:**
+- Phase 2: Extension popup UI
+- Phase 3: Content script for page injection
+- Phase 4: Integration and deployment
+
+See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the complete implementation specification.
 
 ## Overview
 
@@ -20,6 +30,20 @@ This extension will:
 - Support for both fradragstabeller (deduction tables) and tilleggstabeller (addition tables)
 - Non-intrusive browser extension interface
 - Configurable per user (yearly salary, table number)
+
+## Quick Start
+
+### Running Tests
+
+```bash
+# Run unit tests
+node test/trekktabell.test.js
+
+# Generate validation test cases
+node test/validate-against-skatteetaten.js
+```
+
+All tests are currently passing (38/38). The validation script generates test cases that can be manually verified against the [official Skatteetaten calculator](https://tabellkort.app.skatteetaten.no/).
 
 ## Documentation
 
