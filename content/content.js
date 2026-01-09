@@ -16,6 +16,12 @@ const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
 // Extension marker to prevent duplicate injections
 const EXTENSION_MARKER = 'overtime-calculator-injected';
 
+// State management
+let currentObserver = null;
+let debounceTimer = null;
+let lastKnownHours = null;
+let cachedSettings = null;
+
 /**
  * Finds the DOM row containing overtime information
  *
@@ -126,6 +132,93 @@ function removeOvertimePay(hoursSpan) {
 }
 
 /**
+ * Updates the overtime calculation and display
+ *
+ * @param {Element} hoursSpan - The span element containing hours
+ * @param {Object} settings - User settings { yearlySalary, tableNumber, taxYear }
+ */
+function updateOvertimeDisplay(hoursSpan, settings) {
+  try {
+    // Parse hours
+    const overtimeHours = parseOvertimeHours(hoursSpan);
+
+    // Check if hours actually changed
+    if (overtimeHours === lastKnownHours) {
+      return; // No change, skip recalculation
+    }
+
+    lastKnownHours = overtimeHours;
+
+    if (overtimeHours === null || overtimeHours === 0) {
+      // No overtime - remove injected element if it exists
+      removeOvertimePay(hoursSpan);
+      console.log('Overtime Calculator: No overtime hours, display removed');
+      return;
+    }
+
+    // Calculate take-home using the trekktabell module
+    if (typeof calculateOvertimeTakeHome === 'undefined') {
+      console.error('Overtime Calculator: trekktabell.js not loaded');
+      return;
+    }
+
+    const result_calc = calculateOvertimeTakeHome({
+      yearlySalary: settings.yearlySalary,
+      overtimeHours,
+      tableNumber: settings.tableNumber,
+      taxYear: settings.taxYear
+    });
+
+    // Inject/update result
+    injectOvertimePay(hoursSpan, result_calc.takeHome);
+
+    console.log('Overtime Calculator: Updated take-home pay', {
+      hours: overtimeHours,
+      gross: result_calc.grossPay,
+      takeHome: result_calc.takeHome,
+      effectiveRate: `${(result_calc.effectiveRate * 100).toFixed(1)}%`
+    });
+
+  } catch (error) {
+    console.error('Overtime Calculator: Error updating display:', error);
+  }
+}
+
+/**
+ * Sets up a targeted MutationObserver for the hoursSpan element
+ *
+ * @param {Element} hoursSpan - The span element to observe
+ * @param {Object} settings - User settings
+ */
+function observeHoursSpan(hoursSpan, settings) {
+  // Clean up existing observer
+  if (currentObserver) {
+    currentObserver.disconnect();
+  }
+
+  // Create new observer that watches specifically for text changes
+  currentObserver = new MutationObserver(() => {
+    // Debounce updates to avoid excessive recalculations
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    debounceTimer = setTimeout(() => {
+      updateOvertimeDisplay(hoursSpan, settings);
+    }, 100); // 100ms debounce
+  });
+
+  // Observe the hoursSpan for text content changes
+  currentObserver.observe(hoursSpan, {
+    characterData: true,
+    childList: true,
+    subtree: true
+  });
+
+  console.log('Overtime Calculator: Now observing overtime hours for live updates');
+}
+
+/**
  * Main content script execution
  */
 async function main() {
@@ -138,7 +231,14 @@ async function main() {
       return;
     }
 
-    const { yearlySalary, tableNumber, taxYear = 2026 } = result.settings;
+    const settings = {
+      yearlySalary: result.settings.yearlySalary,
+      tableNumber: result.settings.tableNumber,
+      taxYear: result.settings.taxYear || 2026
+    };
+
+    // Cache settings for live updates
+    cachedSettings = settings;
 
     // Find overtime row
     const overtimeData = findOvertimeRow();
@@ -150,38 +250,11 @@ async function main() {
 
     const { hoursSpan } = overtimeData;
 
-    // Parse hours
-    const overtimeHours = parseOvertimeHours(hoursSpan);
+    // Initial update
+    updateOvertimeDisplay(hoursSpan, settings);
 
-    if (overtimeHours === null || overtimeHours === 0) {
-      // No overtime - remove injected element if it exists
-      removeOvertimePay(hoursSpan);
-      return;
-    }
-
-    // Calculate take-home using the trekktabell module
-    // The module should be loaded before this script in manifest.json
-    if (typeof calculateOvertimeTakeHome === 'undefined') {
-      console.error('Overtime Calculator: trekktabell.js not loaded');
-      return;
-    }
-
-    const result_calc = calculateOvertimeTakeHome({
-      yearlySalary,
-      overtimeHours,
-      tableNumber,
-      taxYear
-    });
-
-    // Inject result
-    injectOvertimePay(hoursSpan, result_calc.takeHome);
-
-    console.log('Overtime Calculator: Successfully calculated and injected take-home pay', {
-      hours: overtimeHours,
-      gross: result_calc.grossPay,
-      takeHome: result_calc.takeHome,
-      effectiveRate: `${(result_calc.effectiveRate * 100).toFixed(1)}%`
-    });
+    // Set up live observation of the hoursSpan
+    observeHoursSpan(hoursSpan, settings);
 
   } catch (error) {
     console.error('Overtime Calculator: Error in main execution:', error);
@@ -199,14 +272,12 @@ function init() {
     main();
   }
 
-  // Re-run when page content changes (for SPAs and dynamic updates)
-  const observer = new MutationObserver(() => {
-    main();
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
+  // Listen for settings changes to update live
+  browserAPI.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.settings) {
+      console.log('Overtime Calculator: Settings updated, recalculating...');
+      main(); // Re-initialize with new settings
+    }
   });
 }
 
