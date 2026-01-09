@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overtime Calculator Settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Overtidskalkulator</h1>
+    <p class="subtitle">Innstillinger for beregning av netto overtidsbetaling</p>
+
+    <form id="settingsForm">
+      <div class="form-group">
+        <label for="yearlySalary">
+          Årlig brutto lønn (NOK)
+          <span class="info-icon" title="Din brutto årslønn før skatt">ⓘ</span>
+        </label>
+        <input
+          type="number"
+          id="yearlySalary"
+          name="yearlySalary"
+          min="100000"
+          max="5000000"
+          step="1000"
+          placeholder="f.eks. 900000"
+          required
+        >
+        <span class="error-message" id="salaryError"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="tableNumber">
+          Skattetabelltabell
+          <span class="info-icon" title="Finn ditt tabelltall på skattetrekkskortet ditt">ⓘ</span>
+        </label>
+        <input
+          type="number"
+          id="tableNumber"
+          name="tableNumber"
+          min="8000"
+          max="9400"
+          placeholder="f.eks. 8115"
+          required
+        >
+        <span class="help-text">
+          Fradragstabeller: 8000-8400 | Tilleggstabeller: 9010-9400
+        </span>
+        <span class="error-message" id="tableError"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="taxYear">
+          Skatteår
+        </label>
+        <select id="taxYear" name="taxYear">
+          <option value="2026" selected>2026</option>
+        </select>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" id="saveButton" class="btn btn-primary">
+          Lagre innstillinger
+        </button>
+      </div>
+
+      <div id="successMessage" class="success-message hidden">
+        ✓ Innstillingene er lagret!
+      </div>
+    </form>
+
+    <div class="info-section">
+      <h3>Slik bruker du utvidelsen:</h3>
+      <ol>
+        <li>Fyll inn din årslønn og skattetabell</li>
+        <li>Naviger til timesiden din</li>
+        <li>Overtidsbetalingen vises automatisk ved siden av overtidstimene</li>
+      </ol>
+      <p class="disclaimer">
+        <strong>Merk:</strong> Dette er et estimat basert på skattetrekk.
+        Faktisk utbetaling kan variere.
+      </p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
