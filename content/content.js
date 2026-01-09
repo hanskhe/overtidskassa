@@ -20,7 +20,6 @@ const EXTENSION_MARKER = 'overtime-calculator-injected';
 let currentObserver = null;
 let debounceTimer = null;
 let lastKnownHours = null;
-let cachedSettings = null;
 
 /**
  * Finds the DOM row containing overtime information
@@ -162,7 +161,7 @@ function updateOvertimeDisplay(hoursSpan, settings) {
       return;
     }
 
-    const result_calc = calculateOvertimeTakeHome({
+    const result = calculateOvertimeTakeHome({
       yearlySalary: settings.yearlySalary,
       overtimeHours,
       tableNumber: settings.tableNumber,
@@ -170,13 +169,13 @@ function updateOvertimeDisplay(hoursSpan, settings) {
     });
 
     // Inject/update result
-    injectOvertimePay(hoursSpan, result_calc.takeHome);
+    injectOvertimePay(hoursSpan, result.takeHome);
 
     console.log('Overtime Calculator: Updated take-home pay', {
       hours: overtimeHours,
-      gross: result_calc.grossPay,
-      takeHome: result_calc.takeHome,
-      effectiveRate: `${(result_calc.effectiveRate * 100).toFixed(1)}%`
+      gross: result.grossPay,
+      takeHome: result.takeHome,
+      effectiveRate: `${(result.effectiveRate * 100).toFixed(1)}%`
     });
 
   } catch (error) {
@@ -236,9 +235,6 @@ async function main() {
       tableNumber: result.settings.tableNumber,
       taxYear: result.settings.taxYear || 2026
     };
-
-    // Cache settings for live updates
-    cachedSettings = settings;
 
     // Find overtime row
     const overtimeData = findOvertimeRow();
