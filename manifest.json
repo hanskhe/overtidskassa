@@ -19,7 +19,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://timesheet.example.com/*"],
+      "matches": ["https://timer.bekk.no/*"],
       "js": ["lib/tax-rates.js", "lib/trekktabell.js", "content/content.js"],
       "css": ["content/content.css"]
     }
