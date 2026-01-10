@@ -10,8 +10,13 @@
  * detection strategy based on content and patterns rather than exact classes.
  */
 
-// Browser API compatibility
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+// Browser API compatibility (defensive detection)
+const browserAPI = (() => {
+  if (typeof browser !== 'undefined' && browser.storage) return browser;
+  if (typeof chrome !== 'undefined' && chrome.storage) return chrome;
+  console.error('Overtime Calculator: No browser API available');
+  return null;
+})();
 
 // Extension marker to prevent duplicate injections
 const EXTENSION_MARKER = 'overtime-calculator-injected';
@@ -20,7 +25,7 @@ const EXTENSION_MARKER = 'overtime-calculator-injected';
 let currentObserver = null;
 let debounceTimer = null;
 let lastKnownHours = null;
-let cachedSettings = null;
+let pageObserver = null; // Observer for waiting for dynamic content
 
 /**
  * Finds the DOM row containing overtime information
@@ -162,7 +167,7 @@ function updateOvertimeDisplay(hoursSpan, settings) {
       return;
     }
 
-    const result_calc = calculateOvertimeTakeHome({
+    const result = calculateOvertimeTakeHome({
       yearlySalary: settings.yearlySalary,
       overtimeHours,
       tableNumber: settings.tableNumber,
@@ -170,17 +175,35 @@ function updateOvertimeDisplay(hoursSpan, settings) {
     });
 
     // Inject/update result
-    injectOvertimePay(hoursSpan, result_calc.takeHome);
+    injectOvertimePay(hoursSpan, result.takeHome);
 
     console.log('Overtime Calculator: Updated take-home pay', {
       hours: overtimeHours,
-      gross: result_calc.grossPay,
-      takeHome: result_calc.takeHome,
-      effectiveRate: `${(result_calc.effectiveRate * 100).toFixed(1)}%`
+      gross: result.grossPay,
+      takeHome: result.takeHome,
+      effectiveRate: `${(result.effectiveRate * 100).toFixed(1)}%`
     });
 
   } catch (error) {
     console.error('Overtime Calculator: Error updating display:', error);
+  }
+}
+
+/**
+ * Cleans up all observers and timers
+ */
+function cleanup() {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  if (currentObserver) {
+    currentObserver.disconnect();
+    currentObserver = null;
+  }
+  if (pageObserver) {
+    pageObserver.disconnect();
+    pageObserver = null;
   }
 }
 
@@ -191,7 +214,7 @@ function updateOvertimeDisplay(hoursSpan, settings) {
  * @param {Object} settings - User settings
  */
 function observeHoursSpan(hoursSpan, settings) {
-  // Clean up existing observer
+  // Clean up existing hours observer
   if (currentObserver) {
     currentObserver.disconnect();
   }
@@ -219,10 +242,88 @@ function observeHoursSpan(hoursSpan, settings) {
 }
 
 /**
+ * Waits for the overtime row to appear in the DOM
+ * Handles SPAs that render content dynamically after page load
+ *
+ * @param {number} maxAttempts - Maximum number of retry attempts
+ * @param {number} interval - Interval between retries in ms
+ * @returns {Promise<Object|null>} - Overtime row data or null if not found
+ */
+function waitForOvertimeRow(maxAttempts = 20, interval = 250) {
+  return new Promise((resolve) => {
+    let attempts = 0;
+
+    // Try immediately first
+    const overtimeData = findOvertimeRow();
+    if (overtimeData) {
+      resolve(overtimeData);
+      return;
+    }
+
+    // Set up polling with MutationObserver as backup
+    const checkForRow = () => {
+      attempts++;
+      const data = findOvertimeRow();
+      if (data) {
+        if (pageObserver) {
+          pageObserver.disconnect();
+          pageObserver = null;
+        }
+        resolve(data);
+        return true;
+      }
+      if (attempts >= maxAttempts) {
+        if (pageObserver) {
+          pageObserver.disconnect();
+          pageObserver = null;
+        }
+        resolve(null);
+        return true;
+      }
+      return false;
+    };
+
+    // Use MutationObserver to detect when content is added
+    pageObserver = new MutationObserver(() => {
+      checkForRow();
+    });
+
+    pageObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    // Also use polling as a fallback (some frameworks batch updates)
+    const pollInterval = setInterval(() => {
+      if (checkForRow()) {
+        clearInterval(pollInterval);
+      }
+    }, interval);
+
+    // Safety timeout to clean up interval
+    setTimeout(() => {
+      clearInterval(pollInterval);
+    }, maxAttempts * interval + 100);
+  });
+}
+
+/**
  * Main content script execution
  */
 async function main() {
+  // Clean up any existing observers/timers from previous runs
+  cleanup();
+
+  // Reset state for fresh calculation
+  lastKnownHours = null;
+
   try {
+    // Check if browser API is available
+    if (!browserAPI) {
+      console.error('Overtime Calculator: Browser API not available');
+      return;
+    }
+
     // Load settings
     const result = await browserAPI.storage.local.get('settings');
 
@@ -237,18 +338,17 @@ async function main() {
       taxYear: result.settings.taxYear || 2026
     };
 
-    // Cache settings for live updates
-    cachedSettings = settings;
-
-    // Find overtime row
-    const overtimeData = findOvertimeRow();
+    // Wait for overtime row (handles SPA dynamic rendering)
+    console.log('Overtime Calculator: Waiting for overtime row to appear...');
+    const overtimeData = await waitForOvertimeRow();
 
     if (!overtimeData) {
-      console.warn('Overtime Calculator: Could not find overtime row on this page');
+      console.warn('Overtime Calculator: Could not find overtime row on this page after waiting');
       return;
     }
 
     const { hoursSpan } = overtimeData;
+    console.log('Overtime Calculator: Found overtime row, initializing...');
 
     // Initial update
     updateOvertimeDisplay(hoursSpan, settings);
