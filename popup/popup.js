@@ -4,8 +4,13 @@
  * Handles user settings input, validation, and storage.
  */
 
-// Browser API compatibility (Chrome and Firefox)
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+// Browser API compatibility (defensive detection)
+const browserAPI = (() => {
+  if (typeof browser !== 'undefined' && browser.storage) return browser;
+  if (typeof chrome !== 'undefined' && chrome.storage) return chrome;
+  console.error('Overtime Calculator: No browser API available');
+  return null;
+})();
 
 // DOM elements
 const form = document.getElementById('settingsForm');

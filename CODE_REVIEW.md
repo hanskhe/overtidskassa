@@ -37,6 +37,22 @@ The following bugs were identified and fixed in this review:
 - **Issue:** Two separate checks for salary validity could produce duplicate/confusing error messages
 - **Fix:** Combined into single `else if` chain with clearer error messages
 
+### 6. Page reload requires manual save (content.js)
+- **Issue:** On SPA pages, content loads dynamically after `DOMContentLoaded`. The extension ran once on DOM ready, failed to find the element, and never retried
+- **Fix:** Added `waitForOvertimeRow()` function that uses both MutationObserver and polling to wait for dynamic content (up to 5 seconds)
+
+### 7. Memory leak on re-initialization (content.js)
+- **Issue:** `debounceTimer` and observers were not cleaned up when `main()` was called again
+- **Fix:** Added `cleanup()` function called at start of `main()` to clear all timers and observers
+
+### 8. HTML validation allowed invalid range (popup.html)
+- **Issue:** `min="8000" max="9400"` allowed values 8401-9009 which are invalid
+- **Fix:** Removed `min`/`max` attributes; JavaScript validation is the source of truth
+
+### 9. Browser API detection not defensive (content.js, popup.js)
+- **Issue:** Simple ternary check could fail in edge cases
+- **Fix:** Added IIFE that checks for `browser.storage` or `chrome.storage` existence
+
 ---
 
 ## Structural Improvements (Recommendations)
@@ -74,33 +90,7 @@ if (spans.length === 2) {
 
 ---
 
-### 3. Memory Management in Re-initialization (content.js:200-208)
-
-**Issue:** When `main()` is called again (e.g., settings change), the `debounceTimer` is not cleared before the observer is re-created.
-
-**Location:** `observeHoursSpan()` and the settings change listener
-
-**Code:**
-```javascript
-browserAPI.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.settings) {
-    console.log('Overtime Calculator: Settings updated, recalculating...');
-    main(); // Re-initialize with new settings
-  }
-});
-```
-
-**Recommendation:** Clear `debounceTimer` at the start of `main()` or in `observeHoursSpan()`:
-```javascript
-if (debounceTimer) {
-  clearTimeout(debounceTimer);
-  debounceTimer = null;
-}
-```
-
----
-
-### 4. Unused Export (tax-rates.js:86-88)
+### 3. Unused Export (tax-rates.js:86-88)
 
 **Issue:** The `getCurrentTaxYear()` function is exported but never used anywhere in the codebase.
 
@@ -110,17 +100,7 @@ if (debounceTimer) {
 
 ---
 
-### 5. HTML Validation Gap (popup.html:43)
-
-**Issue:** The `max="9400"` attribute allows the range 8401-9009 which is actually invalid (valid ranges are 8000-8400 OR 9010-9400).
-
-**Current:** HTML5 validation allows invalid inputs that JavaScript catches later.
-
-**Recommendation:** Consider adding a custom HTML5 validation pattern or relying solely on JavaScript validation with clear documentation.
-
----
-
-### 6. Limited Year Support (tax-rates.js)
+### 4. Limited Year Support (tax-rates.js)
 
 **Issue:** Only 2026 tax rates are available. If users need to calculate for previous years (e.g., for tax returns), this isn't supported.
 
@@ -128,26 +108,6 @@ if (debounceTimer) {
 - 2025 and 2024 tax rates for reference
 - Dynamic year selection based on available rates
 - Clear documentation about supported years
-
----
-
-### 7. Browser API Detection (content.js:14, popup.js:8)
-
-**Current implementation:**
-```javascript
-const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
-```
-
-**Issue:** This works but could be more robust for edge cases.
-
-**Recommendation:** Consider using a more defensive approach:
-```javascript
-const browserAPI = (() => {
-  if (typeof browser !== 'undefined' && browser.storage) return browser;
-  if (typeof chrome !== 'undefined' && chrome.storage) return chrome;
-  throw new Error('No browser API available');
-})();
-```
 
 ---
 
