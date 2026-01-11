@@ -150,17 +150,6 @@ function createHoverPopup(result, useWithholding) {
       <span class="popup-label">Skattesats:</span>
       <span class="popup-value">${(displayRate * 100).toFixed(1)}%</span>
     </div>
-    ${!useWithholding && result.estimatedRefund > 0 ? `
-    <div class="popup-divider"></div>
-    <div class="popup-row popup-note">
-      <span class="popup-label">Trekk på lønnsslipp:</span>
-      <span class="popup-value">${formatNOKCompact(result.withholding)} kr</span>
-    </div>
-    <div class="popup-row popup-refund">
-      <span class="popup-label">Tilbake på skatten:</span>
-      <span class="popup-value">~${formatNOKCompact(result.estimatedRefund)} kr</span>
-    </div>
-    ` : ''}
   `;
 
   return popup;

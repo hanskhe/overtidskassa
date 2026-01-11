@@ -132,7 +132,6 @@ function runTests() {
   console.log(`    Withholding: ${formatNOK(overtime1.withholding, true)}`);
   console.log(`    Take-home (withholding): ${formatNOK(overtime1.takeHomeWithholding, true)}`);
   console.log(`    Effective rate (withholding): ${(overtime1.effectiveRateWithholding * 100).toFixed(1)}%`);
-  console.log(`    Estimated refund: ${formatNOK(overtime1.estimatedRefund, true)}`);
 
   assert(overtime1.hourlyRate > 0, 'Hourly rate should be positive');
   // Account for rounding: compare rounded values
@@ -145,11 +144,10 @@ function runTests() {
   assert(overtime1.takeHome < overtime1.grossPay, 'Take-home should be less than gross');
   assert(overtime1.effectiveRate > 0 && overtime1.effectiveRate < 1, 'Effective rate should be between 0 and 1');
 
-  // New tests: Actual tax vs Withholding relationship
-  assert(overtime1.withholding > overtime1.actualTax, 'Withholding should be higher than actual tax');
+  // Test: Actual tax vs Withholding relationship
+  // Withholding is higher because employer assumes overtime recurs monthly
+  assert(overtime1.withholding > overtime1.actualTax, 'Withholding should be higher than actual tax (for occasional overtime)');
   assert(overtime1.takeHome > overtime1.takeHomeWithholding, 'Actual take-home should be higher than withholding-based take-home');
-  assert(overtime1.estimatedRefund > 0, 'Estimated refund should be positive');
-  assertApprox(overtime1.estimatedRefund, overtime1.withholding - overtime1.actualTax, 0.01, 'Refund should equal withholding minus actual tax');
 
   // Test that actual effective rate is lower than withholding rate (by ~14%)
   const rateRatio = overtime1.effectiveRateWithholding / overtime1.effectiveRate;
