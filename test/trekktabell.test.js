@@ -11,6 +11,7 @@ const {
   parseTableNumber,
   calculateTrinnskatt,
   calculateMonthlyWithholding,
+  calculateAnnualTax,
   calculateOvertimeTakeHome,
   formatNOK,
   validateParameters
@@ -125,23 +126,38 @@ function runTests() {
   console.log(`    Hourly rate: ${formatNOK(overtime1.hourlyRate, true)}`);
   console.log(`    Overtime rate (×1.4): ${formatNOK(overtime1.overtimeRate, true)}`);
   console.log(`    Gross pay: ${formatNOK(overtime1.grossPay, true)}`);
+  console.log(`    Actual tax: ${formatNOK(overtime1.actualTax, true)}`);
+  console.log(`    Take-home (actual): ${formatNOK(overtime1.takeHome, true)}`);
+  console.log(`    Effective rate (actual): ${(overtime1.effectiveRate * 100).toFixed(1)}%`);
   console.log(`    Withholding: ${formatNOK(overtime1.withholding, true)}`);
-  console.log(`    Take-home: ${formatNOK(overtime1.takeHome, true)}`);
-  console.log(`    Effective rate: ${(overtime1.effectiveRate * 100).toFixed(1)}%`);
+  console.log(`    Take-home (withholding): ${formatNOK(overtime1.takeHomeWithholding, true)}`);
+  console.log(`    Effective rate (withholding): ${(overtime1.effectiveRateWithholding * 100).toFixed(1)}%`);
+  console.log(`    Estimated refund: ${formatNOK(overtime1.estimatedRefund, true)}`);
 
   assert(overtime1.hourlyRate > 0, 'Hourly rate should be positive');
   // Account for rounding: compare rounded values
   const expectedOvertimeRate = Math.round(overtime1.hourlyRate * 1.4 * 100) / 100;
   assertApprox(overtime1.overtimeRate, expectedOvertimeRate, 0.01, 'Overtime rate should be 1.4× hourly rate');
   assert(overtime1.grossPay > 0, 'Gross pay should be positive');
+  assert(overtime1.actualTax > 0, 'Actual tax should be positive');
   assert(overtime1.withholding > 0, 'Withholding should be positive');
   assert(overtime1.takeHome > 0, 'Take-home should be positive');
   assert(overtime1.takeHome < overtime1.grossPay, 'Take-home should be less than gross');
   assert(overtime1.effectiveRate > 0 && overtime1.effectiveRate < 1, 'Effective rate should be between 0 and 1');
 
+  // New tests: Actual tax vs Withholding relationship
+  assert(overtime1.withholding > overtime1.actualTax, 'Withholding should be higher than actual tax');
+  assert(overtime1.takeHome > overtime1.takeHomeWithholding, 'Actual take-home should be higher than withholding-based take-home');
+  assert(overtime1.estimatedRefund > 0, 'Estimated refund should be positive');
+  assertApprox(overtime1.estimatedRefund, overtime1.withholding - overtime1.actualTax, 0.01, 'Refund should equal withholding minus actual tax');
+
+  // Test that actual effective rate is lower than withholding rate (by ~14%)
+  const rateRatio = overtime1.effectiveRateWithholding / overtime1.effectiveRate;
+  assertApprox(rateRatio, 12/10.5, 0.02, 'Withholding rate should be ~14.3% higher than actual rate');
+
   // Test marginal rate is reasonable (30-50% for typical salaries)
-  assert(overtime1.effectiveRate >= 0.30 && overtime1.effectiveRate <= 0.60,
-    'Effective marginal rate should be 30-60% for typical salary');
+  assert(overtime1.effectiveRate >= 0.30 && overtime1.effectiveRate <= 0.55,
+    'Effective marginal rate should be 30-55% for typical salary');
 
   // Test 5: Edge cases
   console.log('\n--- Test Edge Cases ---');

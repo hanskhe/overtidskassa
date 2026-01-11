@@ -205,3 +205,65 @@ input[type="number"].error:focus {
   opacity: 0.6;
   pointer-events: none;
 }
+
+/* Calculation method toggle */
+.toggle-label {
+  margin-bottom: 10px;
+}
+
+.toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+  margin-bottom: 0;
+  font-weight: normal;
+}
+
+.radio-label:hover {
+  border-color: #0066cc;
+  background-color: #f0f7ff;
+}
+
+.radio-label input[type="radio"] {
+  margin-top: 3px;
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"]:checked + .radio-text strong {
+  color: #0066cc;
+}
+
+.radio-label:has(input[type="radio"]:checked) {
+  border-color: #0066cc;
+  background-color: #f0f7ff;
+}
+
+.radio-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.radio-text strong {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.radio-text small {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.3;
+}
