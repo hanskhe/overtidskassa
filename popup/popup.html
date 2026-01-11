@@ -57,6 +57,32 @@
         </select>
       </div>
 
+      <div class="form-group">
+        <label class="toggle-label">
+          Beregningsmetode
+          <span class="info-icon" title="Velg mellom faktisk skatt (mer nøyaktig) eller forskuddstrekk (det som trekkes på lønnsslippen)">ⓘ</span>
+        </label>
+        <div class="toggle-group">
+          <label class="radio-label">
+            <input type="radio" name="calculationMethod" value="actual" checked>
+            <span class="radio-text">
+              <strong>Faktisk skatt</strong>
+              <small>Mer nøyaktig - viser hva du egentlig betaler i skatt</small>
+            </span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="calculationMethod" value="withholding">
+            <span class="radio-text">
+              <strong>Forskuddstrekk</strong>
+              <small>Viser hva som trekkes på lønnsslippen</small>
+            </span>
+          </label>
+        </div>
+        <span class="help-text">
+          Velg «Faktisk skatt» hvis du jobber overtid av og til. Velg «Forskuddstrekk» hvis du jobber overtid jevnlig.
+        </span>
+      </div>
+
       <div class="button-group">
         <button type="submit" id="saveButton" class="btn btn-primary">
           Lagre innstillinger
@@ -76,8 +102,8 @@
         <li>Overtidsbetalingen vises automatisk ved siden av overtidstimene</li>
       </ol>
       <p class="disclaimer">
-        <strong>Merk:</strong> Dette er et estimat basert på skattetrekk.
-        Faktisk utbetaling kan variere.
+        <strong>Merk:</strong> Dette er et estimat. Hold musepekeren over beløpet
+        for å se detaljert beregning.
       </p>
     </div>
   </div>

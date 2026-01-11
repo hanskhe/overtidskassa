@@ -20,12 +20,14 @@ const browserAPI = (() => {
 
 // Extension marker to prevent duplicate injections
 const EXTENSION_MARKER = 'overtime-calculator-injected';
+const POPUP_MARKER = 'overtime-calculator-popup';
 
 // State management
 let currentObserver = null;
 let debounceTimer = null;
 let lastKnownHours = null;
 let pageObserver = null; // Observer for waiting for dynamic content
+let lastCalculationResult = null; // Store for hover popup
 
 /**
  * Finds the DOM row containing overtime information
@@ -99,14 +101,121 @@ function parseOvertimeHours(hoursSpan) {
 }
 
 /**
+ * Formats a number as NOK currency (Norwegian style)
+ *
+ * @param {number} amount - Amount to format
+ * @returns {string} Formatted string like "3 664"
+ */
+function formatNOKCompact(amount) {
+  return Math.round(amount).toLocaleString('nb-NO');
+}
+
+/**
+ * Creates or updates the hover popup element
+ *
+ * @param {Object} result - Calculation result from calculateOvertimeTakeHome
+ * @param {boolean} useWithholding - Whether to show withholding-based values
+ * @returns {HTMLElement} The popup element
+ */
+function createHoverPopup(result, useWithholding) {
+  let popup = document.querySelector(`.${POPUP_MARKER}`);
+
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.className = POPUP_MARKER;
+    document.body.appendChild(popup);
+  }
+
+  const displayTakeHome = useWithholding ? result.takeHomeWithholding : result.takeHome;
+  const displayTax = useWithholding ? result.withholding : result.actualTax;
+  const displayRate = useWithholding ? result.effectiveRateWithholding : result.effectiveRate;
+  const calculationLabel = useWithholding ? 'Forskuddstrekk' : 'Faktisk skatt';
+
+  popup.innerHTML = `
+    <div class="popup-header">Overtidsbetaling</div>
+    <div class="popup-row">
+      <span class="popup-label">Brutto:</span>
+      <span class="popup-value">${formatNOKCompact(result.grossPay)} kr</span>
+    </div>
+    <div class="popup-row">
+      <span class="popup-label">${calculationLabel}:</span>
+      <span class="popup-value">−${formatNOKCompact(displayTax)} kr</span>
+    </div>
+    <div class="popup-divider"></div>
+    <div class="popup-row popup-total">
+      <span class="popup-label">Utbetalt:</span>
+      <span class="popup-value">${formatNOKCompact(displayTakeHome)} kr</span>
+    </div>
+    <div class="popup-row popup-rate">
+      <span class="popup-label">Skattesats:</span>
+      <span class="popup-value">${(displayRate * 100).toFixed(1)}%</span>
+    </div>
+  `;
+
+  return popup;
+}
+
+/**
+ * Shows the hover popup near the target element
+ *
+ * @param {HTMLElement} targetElement - Element to position popup near
+ * @param {Object} result - Calculation result
+ * @param {boolean} useWithholding - Whether to show withholding values
+ */
+function showHoverPopup(targetElement, result, useWithholding) {
+  const popup = createHoverPopup(result, useWithholding);
+
+  // Position the popup above the element
+  const rect = targetElement.getBoundingClientRect();
+  const popupRect = popup.getBoundingClientRect();
+
+  // Calculate position (above the element, centered)
+  let top = rect.top - popupRect.height - 8 + window.scrollY;
+  let left = rect.left + (rect.width / 2) - (popupRect.width / 2) + window.scrollX;
+
+  // Ensure popup stays within viewport
+  if (top < window.scrollY + 10) {
+    top = rect.bottom + 8 + window.scrollY; // Show below instead
+  }
+  if (left < 10) {
+    left = 10;
+  }
+  if (left + popupRect.width > window.innerWidth - 10) {
+    left = window.innerWidth - popupRect.width - 10;
+  }
+
+  popup.style.top = `${top}px`;
+  popup.style.left = `${left}px`;
+  popup.classList.add('visible');
+}
+
+/**
+ * Hides the hover popup
+ */
+function hideHoverPopup() {
+  const popup = document.querySelector(`.${POPUP_MARKER}`);
+  if (popup) {
+    popup.classList.remove('visible');
+  }
+}
+
+/**
  * Injects or updates the overtime pay display
  *
- * Injects inline: "0.0 t" → "0.0 t (3 000 kr)"
+ * Injects inline: "0.0 t" → "0.0 t (3 664 kr)"
+ * Also adds hover functionality to show detailed breakdown
  *
  * @param {Element} hoursSpan - The span containing hours
- * @param {number} takeHomePay - Calculated take-home pay in NOK
+ * @param {Object} result - Full calculation result from calculateOvertimeTakeHome
+ * @param {boolean} useWithholding - Whether to display withholding-based take-home
  */
-function injectOvertimePay(hoursSpan, takeHomePay) {
+function injectOvertimePay(hoursSpan, result, useWithholding = false) {
+  // Store the result for hover popup
+  lastCalculationResult = result;
+
+  // Determine which take-home value to display
+  const takeHomePay = useWithholding ? result.takeHomeWithholding : result.takeHome;
+
   // Check if already injected (avoid duplicates)
   let payElement = hoursSpan.querySelector(`.${EXTENSION_MARKER}`);
 
@@ -115,10 +224,21 @@ function injectOvertimePay(hoursSpan, takeHomePay) {
     payElement = document.createElement('span');
     payElement.className = EXTENSION_MARKER;
     hoursSpan.appendChild(payElement);
+
+    // Add hover event listeners
+    payElement.addEventListener('mouseenter', () => {
+      if (lastCalculationResult) {
+        showHoverPopup(payElement, lastCalculationResult, useWithholding);
+      }
+    });
+
+    payElement.addEventListener('mouseleave', () => {
+      hideHoverPopup();
+    });
   }
 
-  // Format number with thousand separators (Norwegian style: "3 000")
-  const formatted = Math.round(takeHomePay).toLocaleString('nb-NO');
+  // Format number with thousand separators (Norwegian style: "3 664")
+  const formatted = formatNOKCompact(takeHomePay);
 
   // Update content
   payElement.textContent = ` (${formatted} kr)`;
@@ -140,7 +260,7 @@ function removeOvertimePay(hoursSpan) {
  * Updates the overtime calculation and display
  *
  * @param {Element} hoursSpan - The span element containing hours
- * @param {Object} settings - User settings { yearlySalary, tableNumber, taxYear }
+ * @param {Object} settings - User settings { yearlySalary, tableNumber, taxYear, useWithholding }
  */
 function updateOvertimeDisplay(hoursSpan, settings) {
   try {
@@ -174,14 +294,20 @@ function updateOvertimeDisplay(hoursSpan, settings) {
       taxYear: settings.taxYear
     });
 
-    // Inject/update result
-    injectOvertimePay(hoursSpan, result.takeHome);
+    // Inject/update result (pass full result and useWithholding setting)
+    const useWithholding = settings.useWithholding || false;
+    injectOvertimePay(hoursSpan, result, useWithholding);
+
+    // Log with both values for debugging
+    const displayedTakeHome = useWithholding ? result.takeHomeWithholding : result.takeHome;
+    const displayedRate = useWithholding ? result.effectiveRateWithholding : result.effectiveRate;
 
     console.log('Overtime Calculator: Updated take-home pay', {
       hours: overtimeHours,
       gross: result.grossPay,
-      takeHome: result.takeHome,
-      effectiveRate: `${(result.effectiveRate * 100).toFixed(1)}%`
+      takeHome: displayedTakeHome,
+      effectiveRate: `${(displayedRate * 100).toFixed(1)}%`,
+      mode: useWithholding ? 'withholding' : 'actual tax'
     });
 
   } catch (error) {
@@ -335,7 +461,8 @@ async function main() {
     const settings = {
       yearlySalary: result.settings.yearlySalary,
       tableNumber: result.settings.tableNumber,
-      taxYear: result.settings.taxYear || 2026
+      taxYear: result.settings.taxYear || 2026,
+      useWithholding: result.settings.useWithholding || false
     };
 
     // Wait for overtime row (handles SPA dynamic rendering)

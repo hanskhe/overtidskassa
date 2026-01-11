@@ -96,6 +96,26 @@ function showSuccess() {
 }
 
 /**
+ * Get selected calculation method
+ * @returns {string} 'actual' or 'withholding'
+ */
+function getCalculationMethod() {
+  const selected = document.querySelector('input[name="calculationMethod"]:checked');
+  return selected ? selected.value : 'actual';
+}
+
+/**
+ * Set calculation method radio button
+ * @param {string} method - 'actual' or 'withholding'
+ */
+function setCalculationMethod(method) {
+  const radio = document.querySelector(`input[name="calculationMethod"][value="${method}"]`);
+  if (radio) {
+    radio.checked = true;
+  }
+}
+
+/**
  * Load saved settings from storage
  */
 async function loadSettings() {
@@ -103,7 +123,7 @@ async function loadSettings() {
     const result = await browserAPI.storage.local.get('settings');
 
     if (result.settings) {
-      const { yearlySalary, tableNumber, taxYear } = result.settings;
+      const { yearlySalary, tableNumber, taxYear, useWithholding } = result.settings;
 
       if (yearlySalary) {
         yearlySalaryInput.value = yearlySalary;
@@ -116,6 +136,9 @@ async function loadSettings() {
       if (taxYear) {
         taxYearSelect.value = taxYear;
       }
+
+      // Set calculation method (default to 'actual' if not set)
+      setCalculationMethod(useWithholding ? 'withholding' : 'actual');
     }
   } catch (error) {
     console.error('Error loading settings:', error);
@@ -176,11 +199,16 @@ async function handleSubmit(event) {
   saveButton.disabled = true;
   saveButton.textContent = 'Lagrer...';
 
+  // Get calculation method
+  const calculationMethod = getCalculationMethod();
+  const useWithholding = calculationMethod === 'withholding';
+
   // Save settings
   await saveSettings({
     yearlySalary,
     tableNumber,
-    taxYear
+    taxYear,
+    useWithholding
   });
 
   // Re-enable form
