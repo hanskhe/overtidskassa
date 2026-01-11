@@ -1,0 +1,17 @@
+{
+  "addons": {
+    "overtidskassa@bekk.no": {
+      "updates": [
+        {
+          "version": "1.0.0",
+          "update_link": "https://example.com/extensions/overtidskassa/overtidskassa-1.0.0.xpi",
+          "browser_specific_settings": {
+            "gecko": {
+              "strict_min_version": "109.0"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
