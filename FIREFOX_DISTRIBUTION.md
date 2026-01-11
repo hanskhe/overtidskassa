@@ -191,6 +191,69 @@ Add the new version to the updates array:
 
 Firefox checks `update_url` periodically (typically every 24 hours, or on browser restart). Users will be prompted to update automatically.
 
+## Automated Releases with GitHub Actions
+
+Instead of manually signing each release, you can automate the process using GitHub Actions.
+
+### Setup
+
+1. **Get Mozilla API credentials**
+   - Go to https://addons.mozilla.org/developers/addon/api/key/
+   - Generate new credentials
+   - Note your **JWT issuer** (API key) and **JWT secret**
+
+2. **Add secrets to GitHub repository**
+   - Go to your repo → Settings → Secrets and variables → Actions
+   - Add two secrets:
+     - `AMO_SIGN_KEY`: Your JWT issuer
+     - `AMO_SIGN_SECRET`: Your JWT secret
+
+3. **The workflow is ready**
+   - See `.github/workflows/publish-firefox.yml`
+
+### Usage
+
+**Option A: Release-triggered (recommended)**
+
+1. Update version in `manifest-firefox.json`
+2. Commit and push
+3. Create a GitHub Release with tag matching the version (e.g., `v1.1.0` or `1.1.0`)
+4. The workflow automatically:
+   - Builds the extension
+   - Signs it with Mozilla (unlisted)
+   - Attaches the signed `.xpi` to the release
+
+**Option B: Manual trigger**
+
+1. Go to Actions → "Publish Firefox Extension"
+2. Click "Run workflow"
+3. Enter the version number
+4. Download the signed `.xpi` from workflow artifacts
+
+### After the Workflow Completes
+
+The signed `.xpi` is attached to the GitHub Release. You still need to:
+
+1. Download the signed `.xpi` from the release
+2. Upload it to your hosting server
+3. Update `updates.json` with the new version
+4. Upload the updated `updates.json`
+
+### Fully Automated Hosting (Advanced)
+
+To fully automate hosting, you could extend the workflow to:
+- Upload `.xpi` to your server via SSH/SCP
+- Update `updates.json` automatically
+- Deploy to a static hosting service (GitHub Pages, Cloudflare Pages, etc.)
+
+Example addition to the workflow:
+```yaml
+- name: Deploy to server
+  run: |
+    scp ${{ steps.web-ext-sign.outputs.target }} user@server:/var/www/extensions/
+    # Update updates.json on server
+```
+
 ## Troubleshooting
 
 ### "This add-on could not be installed because it has not been verified"
@@ -222,3 +285,11 @@ Each year when tax rates change:
 1. Update `lib/tax-rates.js` with new rates
 2. Bump version in `manifest-firefox.json`
 3. Sign and release as described above
+
+## References
+
+- [Simplify Browser Extension Deployment with GitHub Actions](https://dev.to/jellyfith/simplify-browser-extension-deployment-with-github-actions-37ob) - Overview of automated extension publishing
+- [kewisch/action-web-ext](https://github.com/kewisch/action-web-ext) - GitHub Action for building and signing Firefox extensions
+- [Mozilla Add-ons API Keys](https://addons.mozilla.org/developers/addon/api/key/) - Generate API credentials for signing
+- [aklinker1/publish-browser-extension](https://github.com/aklinker1/publish-browser-extension) - Multi-browser publishing tool
+- [Firefox Extension Update Manifest](https://extensionworkshop.com/documentation/manage/updating-your-extension/) - Mozilla documentation on self-hosted updates
