@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Overtime Take-Home Calculator",
+  "name": "Overtidskassa",
   "version": "1.0.0",
-  "description": "Calculate estimated take-home pay for overtime hours (Norwegian tax system)",
+  "description": "Beregner sånn ca hvor mye du får i lomma når du jobber overtid",
   "permissions": ["storage", "activeTab"],
   "action": {
     "default_popup": "popup/popup.html",
