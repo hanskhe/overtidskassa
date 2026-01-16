@@ -8,13 +8,13 @@
 </head>
 <body>
   <div class="container">
-    <h1>Overtidskalkulator</h1>
+    <h1>Overtidskassa</h1>
     <p class="subtitle">Innstillinger for beregning av netto overtidsbetaling</p>
 
     <form id="settingsForm">
       <div class="form-group">
         <label for="yearlySalary">
-          Årlig brutto lønn (NOK)
+          Årslønn før skatt (NOK)
           <span class="info-icon" title="Din brutto årslønn før skatt">ⓘ</span>
         </label>
         <input
@@ -24,7 +24,7 @@
           min="100000"
           max="5000000"
           step="1000"
-          placeholder="f.eks. 900000"
+          placeholder="f.eks. 700000"
           required
         >
         <span class="error-message" id="salaryError"></span>
@@ -33,7 +33,7 @@
       <div class="form-group">
         <label for="tableNumber">
           Skattetabell
-          <span class="info-icon" title="Finn ditt tabelltall på skattetrekkskortet ditt">ⓘ</span>
+          <span class="info-icon" title="Finn ditt tabelltall på lønnsslippen i Visma eller på skattekortet ditt">ⓘ</span>
         </label>
         <input
           type="number"
@@ -60,26 +60,26 @@
       <div class="form-group">
         <label class="toggle-label">
           Beregningsmetode
-          <span class="info-icon" title="Velg mellom faktisk skatt (mer nøyaktig) eller forskuddstrekk (det som trekkes på lønnsslippen)">ⓘ</span>
+          <span class="info-icon" title="Dette kommer an på om du er mest opptatt av å vite hva du får på konto neste måned, eller hva som er riktig skatt.">ⓘ</span>
         </label>
         <div class="toggle-group">
           <label class="radio-label">
             <input type="radio" name="calculationMethod" value="actual" checked>
             <span class="radio-text">
-              <strong>Faktisk skatt</strong>
-              <small>Mer nøyaktig - viser hva du egentlig betaler i skatt</small>
+              <strong>Faktisk skattetrekk</strong>
+              <small>Forsøker å beregne endelig inntjening etter skatt</small>
             </span>
           </label>
           <label class="radio-label">
             <input type="radio" name="calculationMethod" value="withholding">
             <span class="radio-text">
               <strong>Forskuddstrekk</strong>
-              <small>Viser hva som trekkes på lønnsslippen</small>
+              <small>Beregner hva du får utbetalt denne måneden, uavhengig av hva som er riktig skatt.</small>
             </span>
           </label>
         </div>
         <span class="help-text">
-          Velg «Faktisk skatt» hvis du jobber overtid av og til. Velg «Forskuddstrekk» hvis du jobber overtid jevnlig.
+          Velg «Faktisk skattetrekk» hvis du jobber overtid av og til. Velg «Forskuddstrekk» hvis du jobber overtid jevnlig.
         </span>
       </div>
 
@@ -98,12 +98,11 @@
       <h3>Slik bruker du utvidelsen:</h3>
       <ol>
         <li>Fyll inn din årslønn og skattetabell</li>
-        <li>Naviger til timesiden din</li>
-        <li>Overtidsbetalingen vises automatisk ved siden av overtidstimene</li>
+        <li>Gå til timer.bekk.no</li>
+        <li>Du får nå se ca hvor mye du får utbetalt for overtiden din</li>
       </ol>
       <p class="disclaimer">
-        <strong>Merk:</strong> Dette er et estimat. Hold musepekeren over beløpet
-        for å se detaljert beregning.
+        <strong>Merk:</strong> Dette er et estimat - skatt er vanskelig!  
       </p>
     </div>
   </div>
