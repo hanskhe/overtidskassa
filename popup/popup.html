@@ -11,41 +11,56 @@
     <h1>Overtidskassa</h1>
     <p class="subtitle">Innstillinger for beregning av netto overtidsbetaling</p>
 
+    <div class="info-section">
+      <!--<h3>Slik bruker du utvidelsen:</h3>
+      <ol>
+        <li>Fyll inn din årslønn og skattetabell</li>
+        <li>Gå til timer.bekk.no</li>
+        <li>Du får nå se ca hvor mye du får utbetalt for overtiden din</li>
+      </ol> -->
+      <p class="disclaimer">
+        <strong>Merk:</strong> Dette er bare et estimat - skatt er vanskelig!  
+      </p>
+    </div>
+
     <form id="settingsForm">
-      <div class="form-group">
-        <label for="yearlySalary">
-          Årslønn før skatt (NOK)
-          <span class="info-icon" title="Din brutto årslønn før skatt">ⓘ</span>
-        </label>
-        <input
-          type="number"
-          id="yearlySalary"
-          name="yearlySalary"
-          min="100000"
-          max="5000000"
-          step="1000"
-          placeholder="f.eks. 700000"
-          required
-        >
-        <span class="error-message" id="salaryError"></span>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="yearlySalary">
+            Årslønn (NOK)
+            <span class="info-icon" title="Din brutto årslønn før skatt">ⓘ</span>
+          </label>
+          <input
+            type="number"
+            id="yearlySalary"
+            name="yearlySalary"
+            min="100000"
+            max="5000000"
+            step="1000"
+            placeholder="700000"
+            required
+          >
+          <span class="error-message" id="salaryError"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="tableNumber">
+            Skattetabell
+            <span class="info-icon" title="Finn ditt tabelltall på lønnsslippen i Visma eller på skattekortet ditt">ⓘ</span>
+          </label>
+          <input
+            type="number"
+            id="tableNumber"
+            name="tableNumber"
+            placeholder="8115"
+            required
+          >
+          <span class="error-message" id="tableError"></span>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label for="tableNumber">
-          Skattetabell
-          <span class="info-icon" title="Finn ditt tabelltall på lønnsslippen i Visma eller på skattekortet ditt">ⓘ</span>
-        </label>
-        <input
-          type="number"
-          id="tableNumber"
-          name="tableNumber"
-          placeholder="f.eks. 8115"
-          required
-        >
-        <span class="help-text">
-          Fradragstabeller: 8000-8400 | Tilleggstabeller: 9010-9400
-        </span>
-        <span class="error-message" id="tableError"></span>
+      <div class="help-text" style="margin-bottom: 20px;">
+        Fradragstabeller: 8000-8400 | Tilleggstabeller: 9010-9400
       </div>
 
       <div class="form-group">
@@ -93,18 +108,6 @@
         ✓ Innstillingene er lagret!
       </div>
     </form>
-
-    <div class="info-section">
-      <h3>Slik bruker du utvidelsen:</h3>
-      <ol>
-        <li>Fyll inn din årslønn og skattetabell</li>
-        <li>Gå til timer.bekk.no</li>
-        <li>Du får nå se ca hvor mye du får utbetalt for overtiden din</li>
-      </ol>
-      <p class="disclaimer">
-        <strong>Merk:</strong> Dette er et estimat - skatt er vanskelig!  
-      </p>
-    </div>
   </div>
 
   <script src="popup.js"></script>

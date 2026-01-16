@@ -37,7 +37,7 @@ function validateSalary(salary) {
   }
 
   if (salary > 5000000) {
-    return 'Årslønnen må være maks 5 000 000 kr';
+    return 'Årslønnen må være mindre enn 5 000 000 kr';
   }
 
   return null;

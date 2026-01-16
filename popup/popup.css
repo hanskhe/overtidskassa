@@ -34,12 +34,23 @@ h1 {
 .subtitle {
   font-size: 13px;
   color: #666;
-  margin-bottom: 24px;
+  margin-bottom: 10px;
 }
 
 /* Form styles */
+.form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .form-group {
   margin-bottom: 0px;
+  flex: 1;
+}
+
+.form-row .form-group {
+  margin-bottom: 0;
 }
 
 label {
@@ -88,7 +99,6 @@ input[type="number"].error:focus {
   display: block;
   font-size: 12px;
   color: #6b7280;
-  margin-top: 4px;
 }
 
 .error-message {
@@ -96,7 +106,6 @@ input[type="number"].error:focus {
   font-size: 12px;
   color: #dc2626;
   margin-top: 4px;
-  min-height: 16px;
 }
 
 /* Buttons */
@@ -164,9 +173,7 @@ input[type="number"].error:focus {
 
 /* Info section */
 .info-section {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid #e5e7eb;
+  margin-bottom: 10px;
 }
 
 .info-section h3 {
@@ -208,6 +215,7 @@ input[type="number"].error:focus {
 
 /* Calculation method toggle */
 .toggle-label {
+  margin-top: 10px;
   margin-bottom: 10px;
 }
 
