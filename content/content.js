@@ -28,6 +28,8 @@ let debounceTimer = null;
 let lastKnownHours = null;
 let pageObserver = null; // Observer for waiting for dynamic content
 let lastCalculationResult = null; // Store for hover popup
+let removalObserver = null; // Observer for detecting when SPA removes our content
+let reinjectDebounceTimer = null; // Debounce for re-injection
 
 /**
  * Finds the DOM row containing overtime information
@@ -323,6 +325,10 @@ function cleanup() {
     clearTimeout(debounceTimer);
     debounceTimer = null;
   }
+  if (reinjectDebounceTimer) {
+    clearTimeout(reinjectDebounceTimer);
+    reinjectDebounceTimer = null;
+  }
   if (currentObserver) {
     currentObserver.disconnect();
     currentObserver = null;
@@ -330,6 +336,10 @@ function cleanup() {
   if (pageObserver) {
     pageObserver.disconnect();
     pageObserver = null;
+  }
+  if (removalObserver) {
+    removalObserver.disconnect();
+    removalObserver = null;
   }
 }
 
@@ -365,6 +375,70 @@ function observeHoursSpan(hoursSpan, settings) {
   });
 
   console.log('Overtime Calculator: Now observing overtime hours for live updates');
+}
+
+/**
+ * Sets up an observer to detect when the SPA removes our injected content
+ * This handles cases where the SPA re-renders and clears our modifications
+ *
+ * @param {Element} hoursSpan - The span element we injected into
+ * @param {Object} settings - User settings (for re-injection)
+ */
+function observeForRemoval(hoursSpan, settings) {
+  // Clean up existing removal observer
+  if (removalObserver) {
+    removalObserver.disconnect();
+  }
+
+  // Find a stable parent container to observe
+  // We look for the "Nøkkeltall" section or fall back to a higher container
+  const headings = Array.from(document.querySelectorAll('h2'));
+  const keyFiguresHeading = headings.find(h =>
+    h.textContent.trim().includes('Nøkkeltall')
+  );
+
+  let observeTarget = document.body;
+  if (keyFiguresHeading) {
+    // Try to find a stable container
+    const container = keyFiguresHeading.closest('[class*="_container_"]') ||
+                     keyFiguresHeading.closest('section') ||
+                     keyFiguresHeading.parentElement?.parentElement;
+    if (container) {
+      observeTarget = container;
+    }
+  }
+
+  // Track the current hoursSpan to detect if it gets replaced
+  let trackedHoursSpan = hoursSpan;
+
+  removalObserver = new MutationObserver((mutations) => {
+    // Check if our injected element still exists in the DOM
+    const injectedElement = document.querySelector(`.${EXTENSION_MARKER}`);
+    const hoursSpanStillExists = document.body.contains(trackedHoursSpan);
+
+    // If injected element is gone or parent is gone, we need to re-inject
+    if (!injectedElement || !hoursSpanStillExists) {
+      console.log('Overtime Calculator: Content was removed by SPA, re-injecting...');
+
+      // Debounce to avoid rapid re-injection during SPA transitions
+      if (reinjectDebounceTimer) {
+        clearTimeout(reinjectDebounceTimer);
+      }
+
+      reinjectDebounceTimer = setTimeout(() => {
+        // Re-run main to find the new elements and re-inject
+        main();
+      }, 150); // 150ms debounce for SPA transitions
+    }
+  });
+
+  // Observe the container for any child changes
+  removalObserver.observe(observeTarget, {
+    childList: true,
+    subtree: true
+  });
+
+  console.log('Overtime Calculator: Now monitoring for content removal by SPA');
 }
 
 /**
@@ -482,6 +556,9 @@ async function main() {
 
     // Set up live observation of the hoursSpan
     observeHoursSpan(hoursSpan, settings);
+
+    // Set up observer to detect when SPA removes our content
+    observeForRemoval(hoursSpan, settings);
 
   } catch (error) {
     console.error('Overtime Calculator: Error in main execution:', error);
