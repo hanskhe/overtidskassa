@@ -452,6 +452,7 @@ function observeForRemoval(hoursSpan, settings) {
 function waitForOvertimeRow(maxAttempts = 20, interval = 250) {
   return new Promise((resolve) => {
     let attempts = 0;
+    let resolved = false; // Prevent double resolution from race condition
 
     // Try immediately first
     const overtimeData = findOvertimeRow();
@@ -462,9 +463,12 @@ function waitForOvertimeRow(maxAttempts = 20, interval = 250) {
 
     // Set up polling with MutationObserver as backup
     const checkForRow = () => {
+      if (resolved) return true; // Already resolved, skip
+
       attempts++;
       const data = findOvertimeRow();
       if (data) {
+        resolved = true;
         if (pageObserver) {
           pageObserver.disconnect();
           pageObserver = null;
@@ -473,6 +477,7 @@ function waitForOvertimeRow(maxAttempts = 20, interval = 250) {
         return true;
       }
       if (attempts >= maxAttempts) {
+        resolved = true;
         if (pageObserver) {
           pageObserver.disconnect();
           pageObserver = null;
@@ -569,6 +574,12 @@ async function main() {
  * Initialize the content script
  */
 function init() {
+  // Check if browser API is available before proceeding
+  if (!browserAPI) {
+    console.error('Overtime Calculator: Cannot initialize - no browser API available');
+    return;
+  }
+
   // Run on page load
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', main);

@@ -3,7 +3,7 @@
   "name": "Overtidskassa",
   "version": "1.0.0",
   "description": "Beregner sånn ca hvor mye du får i lomma når du jobber overtid",
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage"],
   "browser_specific_settings": {
     "gecko": {
       "id": "{6dda6ba4-e831-46fb-bf60-82b2e1a105cd}",
