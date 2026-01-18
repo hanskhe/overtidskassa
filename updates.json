@@ -1,0 +1,17 @@
+{
+  "addons": {
+    "6dda6ba4-e831-46fb-bf60-82b2e1a105cd": {
+      "updates": [
+        {
+          "version": "1.0.0",
+          "update_link": "https://github.com/hanskhe/overtidskassa/releases/download/v1.0.0/overtidskassa-1.0.0.xpi",
+          "browser_specific_settings": {
+            "gecko": {
+              "strict_min_version": "109.0"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

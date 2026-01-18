@@ -1,0 +1,111 @@
+# Firefox Extension Publishing Workflow
+# Signs extension with Mozilla (unlisted) and uploads to GitHub Release
+#
+# Required secrets:
+#   MOZ_SIGN_KEY    - Firefox Add-ons API key (JWT issuer)
+#   MOZ_SIGN_SECRET - Firefox Add-ons API secret
+#
+# Get API credentials at: https://addons.mozilla.org/developers/addon/api/key/
+#
+# Reference: https://dev.to/jellyfith/simplify-browser-extension-deployment-with-github-actions-37ob
+
+name: Publish Firefox Extension
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (must match manifest)"
+        required: true
+        type: string
+
+jobs:
+  build-and-sign:
+    name: Build and Sign Firefox Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version from manifest
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' manifest.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Validate version matches release tag
+        if: github.event_name == 'release'
+        run: |
+          MANIFEST_VERSION=${{ steps.version.outputs.version }}
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          # Strip 'v' prefix if present
+          RELEASE_VERSION="${RELEASE_TAG#v}"
+          if [ "$MANIFEST_VERSION" != "$RELEASE_VERSION" ]; then
+            echo "Error: Manifest version ($MANIFEST_VERSION) does not match release tag ($RELEASE_VERSION)"
+            exit 1
+          fi
+
+      - name: Prepare Firefox extension source
+        run: |
+          mkdir -p build/firefox
+          cp manifest.json build/firefox/manifest.json
+          cp -r content lib popup icons build/firefox/
+
+      - name: Lint extension
+        uses: kewisch/action-web-ext@v1
+        with:
+          cmd: lint
+          source: build/firefox
+
+      - name: Build extension package
+        id: web-ext-build
+        uses: kewisch/action-web-ext@v1
+        with:
+          cmd: build
+          source: build/firefox
+          filename: "overtidskassa-{version}.xpi"
+
+      - name: Sign extension (unlisted)
+        id: web-ext-sign
+        uses: kewisch/action-web-ext@v1
+        with:
+          cmd: sign
+          source: ${{ steps.web-ext-build.outputs.target }}
+          channel: unlisted
+          apiKey: ${{ secrets.MOZ_SIGN_KEY }}
+          apiSecret: ${{ secrets.MOZ_SIGN_SECRET }}
+          timeout: 900000
+
+      - name: Upload signed XPI to release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ steps.web-ext-sign.outputs.target }}
+          asset_name: overtidskassa-${{ steps.version.outputs.version }}.xpi
+          asset_content_type: application/x-xpinstall
+
+      - name: Upload signed XPI as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firefox-extension-signed
+          path: ${{ steps.web-ext-sign.outputs.target }}
+          retention-days: 90
+
+      - name: Summary
+        run: |
+          echo "## Firefox Extension Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Signed XPI:** ${{ steps.web-ext-sign.outputs.target }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the signed XPI from release assets or artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "2. Upload to your hosting server" >> $GITHUB_STEP_SUMMARY
+          echo "3. Update \`updates.json\` with the new version" >> $GITHUB_STEP_SUMMARY
