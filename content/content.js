@@ -63,7 +63,9 @@ function findOvertimeRow() {
   const rows = searchRoot.querySelectorAll('[class*="_row_"]');
 
   for (const row of rows) {
-    const spans = row.querySelectorAll('span');
+    // Use :scope > span to only select direct children, not nested spans
+    // (our injected element is a nested span inside hoursSpan)
+    const spans = row.querySelectorAll(':scope > span');
 
     // Validate structure: must have exactly 2 spans
     if (spans.length === 2) {
