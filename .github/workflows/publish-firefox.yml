@@ -15,11 +15,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to publish (must match manifest)"
-        required: true
-        type: string
 
 jobs:
   build-and-sign:
