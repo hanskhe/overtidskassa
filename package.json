@@ -10,7 +10,7 @@
   "scripts": {
     "test": "node test/trekktabell.test.js",
     "validate": "node test/validate-against-skatteetaten.js",
-    "build:firefox": "rm -rf dist/firefox && mkdir -p dist/firefox && cp manifest-firefox.json dist/firefox/manifest.json && cp -r content lib popup icons dist/firefox/ && cd dist/firefox && zip -r ../overtidskassa-firefox.zip .",
+    "build:firefox": "rm -rf dist/firefox && mkdir -p dist/firefox && cp manifest.json dist/firefox/manifest.json && cp -r content lib popup icons dist/firefox/ && cd dist/firefox && zip -r ../overtidskassa-firefox.zip .",
     "build:chrome": "rm -rf dist/chrome && mkdir -p dist/chrome && cp manifest.json dist/chrome/ && cp -r content lib popup icons dist/chrome/ && cd dist/chrome && zip -r ../overtidskassa-chrome.zip ."
   },
   "keywords": [
