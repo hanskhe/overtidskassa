@@ -26,6 +26,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # For releases, check out main branch to commit updates.json
+          # For workflow_dispatch, use default (triggered branch)
+          ref: ${{ github.event_name == 'release' && 'main' || github.ref }}
 
       - name: Get version from manifest
         id: version
