@@ -19,6 +19,9 @@ on:
 jobs:
   build-and-sign:
     name: Build and Sign Firefox Extension
+    permissions:
+      contents: write
+      actions: write
     runs-on: ubuntu-latest
 
     steps:
