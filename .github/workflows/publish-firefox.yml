@@ -93,6 +93,47 @@ jobs:
           path: ${{ steps.web-ext-sign.outputs.target }}
           retention-days: 90
 
+      - name: Update updates.json with new version
+        if: github.event_name == 'release'
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          EXTENSION_ID=$(jq -r '.browser_specific_settings.gecko.id' manifest.json)
+          MIN_VERSION=$(jq -r '.browser_specific_settings.gecko.strict_min_version' manifest.json)
+
+          # Create new update entry
+          NEW_ENTRY=$(jq -n \
+            --arg version "$VERSION" \
+            --arg link "https://github.com/${{ github.repository }}/releases/download/${RELEASE_TAG}/overtidskassa-${VERSION}.xpi" \
+            --arg min_version "$MIN_VERSION" \
+            '{
+              version: $version,
+              update_link: $link,
+              browser_specific_settings: {
+                gecko: {
+                  strict_min_version: $min_version
+                }
+              }
+            }')
+
+          # Add new entry to updates array
+          jq --arg ext_id "$EXTENSION_ID" \
+             --argjson new_entry "$NEW_ENTRY" \
+             '.addons[$ext_id].updates += [$new_entry]' \
+             updates.json > updates.json.tmp
+          mv updates.json.tmp updates.json
+
+          echo "Updated updates.json with version $VERSION"
+
+      - name: Commit updated updates.json
+        if: github.event_name == 'release'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add updates.json
+          git commit -m "Update updates.json for version ${{ steps.version.outputs.version }}"
+          git push
+
       - name: Summary
         run: |
           echo "## Firefox Extension Published" >> $GITHUB_STEP_SUMMARY
@@ -100,7 +141,15 @@ jobs:
           echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Signed XPI:** ${{ steps.web-ext-sign.outputs.target }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-          echo "1. Download the signed XPI from release assets or artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "2. Upload to your hosting server" >> $GITHUB_STEP_SUMMARY
-          echo "3. Update \`updates.json\` with the new version" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" == "release" ]; then
+            echo "### ✅ Automated Steps Completed" >> $GITHUB_STEP_SUMMARY
+            echo "- Extension signed by Mozilla" >> $GITHUB_STEP_SUMMARY
+            echo "- Uploaded to GitHub Release" >> $GITHUB_STEP_SUMMARY
+            echo "- updates.json updated and committed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Users can now update via the extension's auto-update mechanism!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Manual Workflow Run" >> $GITHUB_STEP_SUMMARY
+            echo "- Extension signed by Mozilla" >> $GITHUB_STEP_SUMMARY
+            echo "- Signed XPI available as artifact for testing" >> $GITHUB_STEP_SUMMARY
+          fi
