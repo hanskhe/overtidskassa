@@ -89,7 +89,7 @@ jobs:
       - name: Upload signed XPI as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: firefox-extension-signed
+          name: overtidskassa-${{ steps.version.outputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ steps.web-ext-sign.outputs.target }}
           retention-days: 90
 
