@@ -8,6 +8,11 @@ En nettleserutvidelse som beregner estimert nettoutbetaling for overtidstimer, b
 
 > **⚠️ Viktig:** Skatt er komplisert, og resultatene fra denne utvidelsen er kun estimater. Faktisk utbetaling kan variere, og endelig skatt fastsettes ved skatteoppgjøret. Bruk dette som en veiledning, ikke som offisielle tall.
 
+## Installasjon
+
+Firefox: [Last ned utvidelsen her (v1.0.2)](https://github.com/hanskhe/overtidskassa/releases/download/v1.0.2/overtidskassa-1.0.2.xpi)
+Chrome: Kommer (kanskje) snart 🤷‍♀️
+
 ## Konfigurasjon
 
 Klikk på utvidelsesikonet og fyll inn:
