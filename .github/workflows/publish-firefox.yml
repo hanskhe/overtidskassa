@@ -2,10 +2,10 @@
 # Signs extension with Mozilla (unlisted) and uploads to GitHub Release
 #
 # Required secrets:
-#   AMO_SIGN_KEY    - Firefox Add-ons API key (JWT issuer)
-#   AMO_SIGN_SECRET - Firefox Add-ons API secret
+#   MOZ_SIGN_KEY    - Firefox Add-ons API key (JWT issuer)
+#   MOZ_SIGN_SECRET - Firefox Add-ons API secret
 #
-# Get your API credentials at: https://addons.mozilla.org/developers/addon/api/key/
+# Get API credentials at: https://addons.mozilla.org/developers/addon/api/key/
 #
 # Reference: https://dev.to/jellyfith/simplify-browser-extension-deployment-with-github-actions-37ob
 
@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to publish (must match manifest)'
+        description: "Version to publish (must match manifest)"
         required: true
         type: string
 
@@ -33,7 +33,7 @@ jobs:
       - name: Get version from manifest
         id: version
         run: |
-          VERSION=$(jq -r '.version' manifest-firefox.json)
+          VERSION=$(jq -r '.version' manifest.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION"
 
@@ -52,7 +52,7 @@ jobs:
       - name: Prepare Firefox extension source
         run: |
           mkdir -p build/firefox
-          cp manifest-firefox.json build/firefox/manifest.json
+          cp manifest.json build/firefox/manifest.json
           cp -r content lib popup icons build/firefox/
 
       - name: Lint extension
@@ -76,8 +76,8 @@ jobs:
           cmd: sign
           source: ${{ steps.web-ext-build.outputs.target }}
           channel: unlisted
-          apiKey: ${{ secrets.AMO_SIGN_KEY }}
-          apiSecret: ${{ secrets.AMO_SIGN_SECRET }}
+          apiKey: ${{ secrets.MOZ_SIGN_KEY }}
+          apiSecret: ${{ secrets.MOZ_SIGN_SECRET }}
           timeout: 900000
 
       - name: Upload signed XPI to release
