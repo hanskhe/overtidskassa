@@ -8,7 +8,7 @@
 const browserAPI = (() => {
   if (typeof browser !== 'undefined' && browser.storage) return browser;
   if (typeof chrome !== 'undefined' && chrome.storage) return chrome;
-  console.error('Overtime Calculator: No browser API available');
+  console.error('Overtidskassa: No browser API available');
   return null;
 })();
 

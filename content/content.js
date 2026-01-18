@@ -14,7 +14,7 @@
 const browserAPI = (() => {
   if (typeof browser !== 'undefined' && browser.storage) return browser;
   if (typeof chrome !== 'undefined' && chrome.storage) return chrome;
-  console.error('Overtime Calculator: No browser API available');
+  console.error('Overtidskassa: No browser API available');
   return null;
 })();
 
@@ -279,13 +279,13 @@ function updateOvertimeDisplay(hoursSpan, settings) {
     if (overtimeHours === null || overtimeHours === 0) {
       // No overtime - remove injected element if it exists
       removeOvertimePay(hoursSpan);
-      console.log('Overtime Calculator: No overtime hours, display removed');
+      console.log('Overtidskassa: No overtime hours, display removed');
       return;
     }
 
     // Calculate take-home using the trekktabell module
     if (typeof calculateOvertimeTakeHome === 'undefined') {
-      console.error('Overtime Calculator: trekktabell.js not loaded');
+      console.error('Overtidskassa: trekktabell.js not loaded');
       return;
     }
 
@@ -304,7 +304,7 @@ function updateOvertimeDisplay(hoursSpan, settings) {
     const displayedTakeHome = useWithholding ? result.takeHomeWithholding : result.takeHome;
     const displayedRate = useWithholding ? result.effectiveRateWithholding : result.effectiveRate;
 
-    console.log('Overtime Calculator: Updated take-home pay', {
+    console.log('Overtidskassa: Updated take-home pay', {
       hours: overtimeHours,
       gross: result.grossPay,
       takeHome: displayedTakeHome,
@@ -313,7 +313,7 @@ function updateOvertimeDisplay(hoursSpan, settings) {
     });
 
   } catch (error) {
-    console.error('Overtime Calculator: Error updating display:', error);
+    console.error('Overtidskassa: Error updating display:', error);
   }
 }
 
@@ -374,7 +374,7 @@ function observeHoursSpan(hoursSpan, settings) {
     subtree: true
   });
 
-  console.log('Overtime Calculator: Now observing overtime hours for live updates');
+  console.log('Overtidskassa: Now observing overtime hours for live updates');
 }
 
 /**
@@ -418,7 +418,7 @@ function observeForRemoval(hoursSpan, settings) {
 
     // If injected element is gone or parent is gone, we need to re-inject
     if (!injectedElement || !hoursSpanStillExists) {
-      console.log('Overtime Calculator: Content was removed by SPA, re-injecting...');
+      console.log('Overtidskassa: Content was removed by SPA, re-injecting...');
 
       // Debounce to avoid rapid re-injection during SPA transitions
       if (reinjectDebounceTimer) {
@@ -438,7 +438,7 @@ function observeForRemoval(hoursSpan, settings) {
     subtree: true
   });
 
-  console.log('Overtime Calculator: Now monitoring for content removal by SPA');
+  console.log('Overtidskassa: Now monitoring for content removal by SPA');
 }
 
 /**
@@ -525,7 +525,7 @@ async function main() {
   try {
     // Check if browser API is available
     if (!browserAPI) {
-      console.error('Overtime Calculator: Browser API not available');
+      console.error('Overtidskassa: Browser API not available');
       return;
     }
 
@@ -533,7 +533,7 @@ async function main() {
     const result = await browserAPI.storage.local.get('settings');
 
     if (!result.settings || !result.settings.yearlySalary || !result.settings.tableNumber) {
-      console.warn('Overtime Calculator: Settings not configured. Please open the extension popup to configure.');
+      console.warn('Overtidskassa: Settings not configured. Please open the extension popup to configure.');
       return;
     }
 
@@ -545,16 +545,16 @@ async function main() {
     };
 
     // Wait for overtime row (handles SPA dynamic rendering)
-    console.log('Overtime Calculator: Waiting for overtime row to appear...');
+    console.log('Overtidskassa: Waiting for overtime row to appear...');
     const overtimeData = await waitForOvertimeRow();
 
     if (!overtimeData) {
-      console.warn('Overtime Calculator: Could not find overtime row on this page after waiting');
+      console.warn('Overtidskassa: Could not find overtime row on this page after waiting');
       return;
     }
 
     const { hoursSpan } = overtimeData;
-    console.log('Overtime Calculator: Found overtime row, initializing...');
+    console.log('Overtidskassa: Found overtime row, initializing...');
 
     // Initial update
     updateOvertimeDisplay(hoursSpan, settings);
@@ -566,7 +566,7 @@ async function main() {
     observeForRemoval(hoursSpan, settings);
 
   } catch (error) {
-    console.error('Overtime Calculator: Error in main execution:', error);
+    console.error('Overtidskassa: Error in main execution:', error);
   }
 }
 
@@ -576,7 +576,7 @@ async function main() {
 function init() {
   // Check if browser API is available before proceeding
   if (!browserAPI) {
-    console.error('Overtime Calculator: Cannot initialize - no browser API available');
+    console.error('Overtidskassa: Cannot initialize - no browser API available');
     return;
   }
 
@@ -590,7 +590,7 @@ function init() {
   // Listen for settings changes to update live
   browserAPI.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.settings) {
-      console.log('Overtime Calculator: Settings updated, recalculating...');
+      console.log('Overtidskassa: Settings updated, recalculating...');
       main(); // Re-initialize with new settings
     }
   });
