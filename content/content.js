@@ -30,6 +30,8 @@ let pageObserver = null; // Observer for waiting for dynamic content
 let lastCalculationResult = null; // Store for hover popup
 let removalObserver = null; // Observer for detecting when SPA removes our content
 let reinjectDebounceTimer = null; // Debounce for re-injection
+let currentUseWithholding = false; // Current setting for hover popup (avoids closure issues)
+let currentSettings = null; // Current settings for observers (avoids stale closure issues)
 
 /**
  * Finds the DOM row containing overtime information
@@ -63,7 +65,9 @@ function findOvertimeRow() {
   const rows = searchRoot.querySelectorAll('[class*="_row_"]');
 
   for (const row of rows) {
-    const spans = row.querySelectorAll('span');
+    // Use :scope > span to only select direct children, not nested spans
+    // (our injected element is a nested span inside hoursSpan)
+    const spans = row.querySelectorAll(':scope > span');
 
     // Validate structure: must have exactly 2 spans
     if (spans.length === 2) {
@@ -212,8 +216,9 @@ function hideHoverPopup() {
  * @param {boolean} useWithholding - Whether to display withholding-based take-home
  */
 function injectOvertimePay(hoursSpan, result, useWithholding = false) {
-  // Store the result for hover popup
+  // Store the result and setting for hover popup
   lastCalculationResult = result;
+  currentUseWithholding = useWithholding;
 
   // Determine which take-home value to display
   const takeHomePay = useWithholding ? result.takeHomeWithholding : result.takeHome;
@@ -228,9 +233,10 @@ function injectOvertimePay(hoursSpan, result, useWithholding = false) {
     hoursSpan.appendChild(payElement);
 
     // Add hover event listeners
+    // Use module-level currentUseWithholding to always reflect latest setting
     payElement.addEventListener('mouseenter', () => {
       if (lastCalculationResult) {
-        showHoverPopup(payElement, lastCalculationResult, useWithholding);
+        showHoverPopup(payElement, lastCalculationResult, currentUseWithholding);
       }
     });
 
@@ -347,9 +353,8 @@ function cleanup() {
  * Sets up a targeted MutationObserver for the hoursSpan element
  *
  * @param {Element} hoursSpan - The span element to observe
- * @param {Object} settings - User settings
  */
-function observeHoursSpan(hoursSpan, settings) {
+function observeHoursSpan(hoursSpan) {
   // Clean up existing hours observer
   if (currentObserver) {
     currentObserver.disconnect();
@@ -363,7 +368,10 @@ function observeHoursSpan(hoursSpan, settings) {
     }
 
     debounceTimer = setTimeout(() => {
-      updateOvertimeDisplay(hoursSpan, settings);
+      // Use module-level currentSettings to always have latest settings
+      if (currentSettings) {
+        updateOvertimeDisplay(hoursSpan, currentSettings);
+      }
     }, 100); // 100ms debounce
   });
 
@@ -382,9 +390,8 @@ function observeHoursSpan(hoursSpan, settings) {
  * This handles cases where the SPA re-renders and clears our modifications
  *
  * @param {Element} hoursSpan - The span element we injected into
- * @param {Object} settings - User settings (for re-injection)
  */
-function observeForRemoval(hoursSpan, settings) {
+function observeForRemoval(hoursSpan) {
   // Clean up existing removal observer
   if (removalObserver) {
     removalObserver.disconnect();
@@ -544,6 +551,9 @@ async function main() {
       useWithholding: result.settings.useWithholding || false
     };
 
+    // Store settings at module level for observers to reference
+    currentSettings = settings;
+
     // Wait for overtime row (handles SPA dynamic rendering)
     console.log('Overtidskassa: Waiting for overtime row to appear...');
     const overtimeData = await waitForOvertimeRow();
@@ -560,13 +570,87 @@ async function main() {
     updateOvertimeDisplay(hoursSpan, settings);
 
     // Set up live observation of the hoursSpan
-    observeHoursSpan(hoursSpan, settings);
+    observeHoursSpan(hoursSpan);
 
     // Set up observer to detect when SPA removes our content
-    observeForRemoval(hoursSpan, settings);
+    observeForRemoval(hoursSpan);
 
   } catch (error) {
     console.error('Overtidskassa: Error in main execution:', error);
+  }
+}
+
+/**
+ * Recalculates and updates the display with new settings
+ * Uses existing injected element if available (more efficient than re-running main)
+ *
+ * @param {Object} settings - New settings { yearlySalary, tableNumber, taxYear, useWithholding }
+ * @returns {boolean} - true if update was successful, false if element not found
+ */
+function recalculateWithNewSettings(settings) {
+  try {
+    // Update module-level settings so observers use the new values
+    currentSettings = settings;
+
+    // Find our existing injected element
+    const injectedElement = document.querySelector(`.${EXTENSION_MARKER}`);
+
+    if (!injectedElement || !document.body.contains(injectedElement)) {
+      // Element doesn't exist or was removed from DOM
+      return false;
+    }
+
+    // Get the hoursSpan (parent of our injected element)
+    const hoursSpan = injectedElement.parentElement;
+
+    if (!hoursSpan) {
+      return false;
+    }
+
+    // Parse hours
+    const overtimeHours = parseOvertimeHours(hoursSpan);
+
+    if (overtimeHours === null || overtimeHours === 0) {
+      // No overtime - remove injected element
+      removeOvertimePay(hoursSpan);
+      console.log('Overtidskassa: No overtime hours, display removed');
+      return true;
+    }
+
+    // Calculate take-home using the trekktabell module
+    if (typeof calculateOvertimeTakeHome === 'undefined') {
+      console.error('Overtidskassa: trekktabell.js not loaded');
+      return false;
+    }
+
+    const result = calculateOvertimeTakeHome({
+      yearlySalary: settings.yearlySalary,
+      overtimeHours,
+      tableNumber: settings.tableNumber,
+      taxYear: settings.taxYear
+    });
+
+    // Update display with new settings
+    const useWithholding = settings.useWithholding || false;
+    injectOvertimePay(hoursSpan, result, useWithholding);
+
+    // Log the update
+    const displayedTakeHome = useWithholding ? result.takeHomeWithholding : result.takeHome;
+    const displayedRate = useWithholding ? result.effectiveRateWithholding : result.effectiveRate;
+
+    console.log('Overtidskassa: Recalculated with new settings', {
+      hours: overtimeHours,
+      gross: result.grossPay,
+      takeHome: displayedTakeHome,
+      effectiveRate: `${(displayedRate * 100).toFixed(1)}%`,
+      mode: useWithholding ? 'withholding' : 'actual tax'
+    });
+
+    return true;
+
+  } catch (error) {
+    console.error('Overtidskassa: Error recalculating with new settings:', error);
+    return false;
   }
 }
 
@@ -591,7 +675,20 @@ function init() {
   browserAPI.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.settings) {
       console.log('Overtidskassa: Settings updated, recalculating...');
-      main(); // Re-initialize with new settings
+
+      const newSettings = {
+        yearlySalary: changes.settings.newValue.yearlySalary,
+        tableNumber: changes.settings.newValue.tableNumber,
+        taxYear: changes.settings.newValue.taxYear || 2026,
+        useWithholding: changes.settings.newValue.useWithholding || false
+      };
+
+      // Try to update existing element directly (more efficient)
+      // Fall back to full re-initialization if element not found
+      if (!recalculateWithNewSettings(newSettings)) {
+        console.log('Overtidskassa: Element not found, running full initialization...');
+        main();
+      }
     }
   });
 }
