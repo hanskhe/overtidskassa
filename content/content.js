@@ -31,6 +31,7 @@ let lastCalculationResult = null; // Store for hover popup
 let removalObserver = null; // Observer for detecting when SPA removes our content
 let reinjectDebounceTimer = null; // Debounce for re-injection
 let currentUseWithholding = false; // Current setting for hover popup (avoids closure issues)
+let currentSettings = null; // Current settings for observers (avoids stale closure issues)
 
 /**
  * Finds the DOM row containing overtime information
@@ -352,9 +353,8 @@ function cleanup() {
  * Sets up a targeted MutationObserver for the hoursSpan element
  *
  * @param {Element} hoursSpan - The span element to observe
- * @param {Object} settings - User settings
  */
-function observeHoursSpan(hoursSpan, settings) {
+function observeHoursSpan(hoursSpan) {
   // Clean up existing hours observer
   if (currentObserver) {
     currentObserver.disconnect();
@@ -368,7 +368,10 @@ function observeHoursSpan(hoursSpan, settings) {
     }
 
     debounceTimer = setTimeout(() => {
-      updateOvertimeDisplay(hoursSpan, settings);
+      // Use module-level currentSettings to always have latest settings
+      if (currentSettings) {
+        updateOvertimeDisplay(hoursSpan, currentSettings);
+      }
     }, 100); // 100ms debounce
   });
 
@@ -387,9 +390,8 @@ function observeHoursSpan(hoursSpan, settings) {
  * This handles cases where the SPA re-renders and clears our modifications
  *
  * @param {Element} hoursSpan - The span element we injected into
- * @param {Object} settings - User settings (for re-injection)
  */
-function observeForRemoval(hoursSpan, settings) {
+function observeForRemoval(hoursSpan) {
   // Clean up existing removal observer
   if (removalObserver) {
     removalObserver.disconnect();
@@ -549,6 +551,9 @@ async function main() {
       useWithholding: result.settings.useWithholding || false
     };
 
+    // Store settings at module level for observers to reference
+    currentSettings = settings;
+
     // Wait for overtime row (handles SPA dynamic rendering)
     console.log('Overtidskassa: Waiting for overtime row to appear...');
     const overtimeData = await waitForOvertimeRow();
@@ -565,10 +570,10 @@ async function main() {
     updateOvertimeDisplay(hoursSpan, settings);
 
     // Set up live observation of the hoursSpan
-    observeHoursSpan(hoursSpan, settings);
+    observeHoursSpan(hoursSpan);
 
     // Set up observer to detect when SPA removes our content
-    observeForRemoval(hoursSpan, settings);
+    observeForRemoval(hoursSpan);
 
   } catch (error) {
     console.error('Overtidskassa: Error in main execution:', error);
@@ -584,6 +589,9 @@ async function main() {
  */
 function recalculateWithNewSettings(settings) {
   try {
+    // Update module-level settings so observers use the new values
+    currentSettings = settings;
+
     // Find our existing injected element
     const injectedElement = document.querySelector(`.${EXTENSION_MARKER}`);
 
