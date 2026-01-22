@@ -10,7 +10,7 @@ En nettleserutvidelse som beregner estimert nettoutbetaling for overtidstimer, b
 
 ## Installasjon
 
-Firefox: [Last ned utvidelsen her (v1.1.0)](https://github.com/hanskhe/overtidskassa/releases/download/v1.1.0/overtidskassa-1.1.0.xpi)
+Firefox: [Last ned utvidelsen her (v1.2.0)](https://github.com/hanskhe/overtidskassa/releases/download/v1.2.0/overtidskassa-1.2.0.xpi)
 
 Chrome: Kommer (kanskje) snart 🤷‍♀️
 

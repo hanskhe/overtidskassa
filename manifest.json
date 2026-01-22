@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Overtidskassa",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Beregner sånn ca hvor mye du får i lomma når du jobber overtid",
   "permissions": ["storage"],
   "browser_specific_settings": {
@@ -26,7 +26,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://timer.bekk.no/*"],
+      "matches": ["https://timer.bekk.no/*", "https://timekeeper.bekk.no/*"],
       "js": ["lib/tax-rates.js", "lib/trekktabell.js", "content/content.js"],
       "css": ["content/content.css"]
     }
