@@ -26,7 +26,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://timer.bekk.no/*"],
+      "matches": ["https://timer.bekk.no/*", "https://timekeeper.bekk.no/*"],
       "js": ["lib/tax-rates.js", "lib/trekktabell.js", "content/content.js"],
       "css": ["content/content.css"]
     }
