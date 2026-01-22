@@ -1,5 +1,6 @@
-# Firefox Extension Publishing Workflow
-# Signs extension with Mozilla (unlisted) and uploads to GitHub Release
+# Browser Extension Publishing Workflow
+# - Firefox: Signs extension with Mozilla (unlisted) and uploads to GitHub Release
+# - Chrome: Packages extension (unsigned) and uploads to GitHub Release
 #
 # Required secrets:
 #   MOZ_SIGN_KEY    - Firefox Add-ons API key (JWT issuer)
@@ -9,7 +10,7 @@
 #
 # Reference: https://dev.to/jellyfith/simplify-browser-extension-deployment-with-github-actions-37ob
 
-name: Publish Firefox Extension
+name: Publish Browser Extensions
 
 on:
   release:
@@ -18,7 +19,7 @@ on:
 
 jobs:
   build-and-sign:
-    name: Build and Sign Firefox Extension
+    name: Build and Sign Extensions
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -81,6 +82,15 @@ jobs:
           apiSecret: ${{ secrets.MOZ_SIGN_SECRET }}
           timeout: 900000
 
+      - name: Build Chrome extension package
+        run: |
+          mkdir -p build/chrome
+          cp manifest.json build/chrome/manifest.json
+          cp -r content lib popup icons build/chrome/
+          cd build/chrome
+          zip -r ../../overtidskassa-chrome-${{ steps.version.outputs.version }}.zip .
+          echo "Chrome package created: overtidskassa-chrome-${{ steps.version.outputs.version }}.zip"
+
       - name: Upload signed XPI to release
         if: github.event_name == 'release'
         uses: actions/upload-release-asset@v1
@@ -95,8 +105,26 @@ jobs:
       - name: Upload signed XPI as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: overtidskassa-${{ steps.version.outputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: overtidskassa-firefox-${{ steps.version.outputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ steps.web-ext-sign.outputs.target }}
+          retention-days: 90
+
+      - name: Upload Chrome package to release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: overtidskassa-chrome-${{ steps.version.outputs.version }}.zip
+          asset_name: overtidskassa-chrome-${{ steps.version.outputs.version }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload Chrome package as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: overtidskassa-chrome-${{ steps.version.outputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: overtidskassa-chrome-${{ steps.version.outputs.version }}.zip
           retention-days: 90
 
       - name: Update updates.json with new version
@@ -142,20 +170,35 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## Firefox Extension Published" >> $GITHUB_STEP_SUMMARY
+          echo "## Browser Extensions Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Firefox Extension" >> $GITHUB_STEP_SUMMARY
           echo "**Signed XPI:** ${{ steps.web-ext-sign.outputs.target }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Chrome Extension" >> $GITHUB_STEP_SUMMARY
+          echo "**Package:** overtidskassa-chrome-${{ steps.version.outputs.version }}.zip (unsigned)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ github.event_name }}" == "release" ]; then
             echo "### ✅ Automated Steps Completed" >> $GITHUB_STEP_SUMMARY
+            echo "**Firefox:**" >> $GITHUB_STEP_SUMMARY
             echo "- Extension signed by Mozilla" >> $GITHUB_STEP_SUMMARY
             echo "- Uploaded to GitHub Release" >> $GITHUB_STEP_SUMMARY
             echo "- updates.json updated and committed" >> $GITHUB_STEP_SUMMARY
+            echo "- Users can now auto-update!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Users can now update via the extension's auto-update mechanism!" >> $GITHUB_STEP_SUMMARY
+            echo "**Chrome:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Extension packaged (unsigned)" >> $GITHUB_STEP_SUMMARY
+            echo "- Uploaded to GitHub Release" >> $GITHUB_STEP_SUMMARY
+            echo "- Ready for manual distribution or Chrome Web Store submission" >> $GITHUB_STEP_SUMMARY
           else
             echo "### Manual Workflow Run" >> $GITHUB_STEP_SUMMARY
+            echo "**Firefox:**" >> $GITHUB_STEP_SUMMARY
             echo "- Extension signed by Mozilla" >> $GITHUB_STEP_SUMMARY
             echo "- Signed XPI available as artifact for testing" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Chrome:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Extension packaged (unsigned)" >> $GITHUB_STEP_SUMMARY
+            echo "- Package available as artifact for testing" >> $GITHUB_STEP_SUMMARY
           fi
