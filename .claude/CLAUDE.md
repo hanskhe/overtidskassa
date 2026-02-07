@@ -206,22 +206,25 @@ If timer.bekk.no changes their HTML structure:
 
 ## Distribution & Updates
 
-### Firefox Auto-Updates
+Both Firefox and Chrome extensions are published via the `publish-extension.yml` GitHub Actions workflow, triggered on release creation.
 
-The extension uses GitHub-hosted auto-updates:
+### Firefox (Signed, Auto-Updates)
 
 1. **Extension ID**: `{6dda6ba4-e831-46fb-bf60-82b2e1a105cd}` (must remain constant)
 2. **Update URL**: Points to `updates.json` in main branch on GitHub
-3. **Process**:
-   - Build with `npm run build:firefox`
-   - Submit to addons.mozilla.org for signing (unlisted distribution)
-   - Update `updates.json` with new version and download URL
-   - GitHub Actions workflow auto-updates `updates.json` on release
+3. **Workflow automatically**:
+   - Signs extension via Mozilla Add-ons API (unlisted distribution)
+   - Uploads signed `.xpi` to GitHub Release
+   - Updates `updates.json` with new version
 4. **User updates**: Firefox checks for updates every 24 hours automatically
 
-### Chrome Distribution
+### Chrome (Unsigned)
 
-Build with `npm run build:chrome` and distribute the `.zip` file through Chrome Web Store or internal channels.
+1. **Workflow automatically**:
+   - Packages extension as `.zip`
+   - Uploads to GitHub Release
+2. **Current state**: Not yet signed or published to Chrome Web Store
+3. **Distribution**: Manual sideloading via `chrome://extensions` (developer mode) or future Chrome Web Store submission
 
 ## Known Limitations
 
